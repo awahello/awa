@@ -25,7 +25,7 @@ show_menu() {
 CURRENT_CRON=$(crontab -l 2>/dev/null || true)
 
 
-# 科技lion 同步脚本
+# awa 同步脚本
 CADDY_LINE=$(echo "$CURRENT_CRON" | grep -F "/home/docker/mailcow-dockerized/zhengshunginx.sh" | head -n 1)
 if [ -n "$CADDY_LINE" ]; then
     echo "✅ 容器 Nginx 证书同步定时任务已存在:"
@@ -74,7 +74,7 @@ fi
     echo "1) 安装 Mailcow"
     echo "2) 更新 Mailcow"
     echo "3) 备份 Mailcow"
-    echo "4) 恢复备份，安装科技lion的nginx，只能安装nginx不能添加网站⚠️ "
+    echo "4) 恢复备份，安装awa的nginx，只能安装nginx不能添加网站⚠️ "
 
     echo "5) 自动复制证书Caddy"
 
