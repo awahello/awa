@@ -229,8 +229,4 @@ ls -t /var/discourse/shared/standalone/backups/default/*.tar.gz | head -1 | xarg
 
 ```
 
-备份作者原地址视频[视频介绍](https://www.youtube.com/watch?v=0CkomEpfbhk)
-***
-### 觉得脚本还可以USTD TRC20打赏
-![Snipaste_2024-01-17_18-01-52](https://github.com/awahello/sh/assets/131984541/98cf2762-1bfb-4c33-af10-af0eda29fc20)
 
