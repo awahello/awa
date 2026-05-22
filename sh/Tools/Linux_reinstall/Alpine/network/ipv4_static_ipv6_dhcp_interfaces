@@ -1,0 +1,9 @@
+auto lo
+iface lo inet loopback
+
+auto networkAdapter
+iface networkAdapter inet static
+        address IPv4
+        netmask MASK
+        gateway GATE
+iface networkAdapter inet6 auto
