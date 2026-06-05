@@ -5377,7 +5377,7 @@ linux_panel() {
 	  echo -e "▶ 面板工具"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}1.   ${gl_bai}宝塔面板官方版                      ${gl_kjlan}2.   ${gl_bai}aaPanel宝塔国际版"
-	  echo -e "${gl_kjlan}1A.   ${gl_bai}宝塔面板升级开心企业版"     
+	  echo -e "${gl_kjlan}1A.  ${gl_bai}升级宝塔面板开心企业版（不能直接安装）"     
 	  echo -e "${gl_kjlan}3.   ${gl_bai}1Panel新一代管理面板                ${gl_kjlan}4.   ${gl_bai}NginxProxyManager可视化面板"
 	  echo -e "${gl_kjlan}5.   ${gl_bai}哪吒探针备份与恢复                    ${gl_kjlan}6.   ${gl_bai}Ubuntu远程桌面网页版3006端口"
 	  echo -e "${gl_kjlan}7.   ${gl_bai}哪吒探针VPS监控面板                 ${gl_kjlan}8.   ${gl_bai}QB离线BT磁力下载面板"
