@@ -5377,6 +5377,7 @@ linux_panel() {
 	  echo -e "▶ 面板工具"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}1.   ${gl_bai}宝塔面板官方版                      ${gl_kjlan}2.   ${gl_bai}aaPanel宝塔国际版"
+	  echo -e "${gl_kjlan}1A.   ${gl_bai}宝塔面板企业版开心版      
 	  echo -e "${gl_kjlan}3.   ${gl_bai}1Panel新一代管理面板                ${gl_kjlan}4.   ${gl_bai}NginxProxyManager可视化面板"
 	  echo -e "${gl_kjlan}5.   ${gl_bai}哪吒探针备份与恢复                    ${gl_kjlan}6.   ${gl_bai}Ubuntu远程桌面网页版3006端口"
 	  echo -e "${gl_kjlan}7.   ${gl_bai}哪吒探针VPS监控面板                 ${gl_kjlan}8.   ${gl_bai}QB离线BT磁力下载面板"
@@ -5493,6 +5494,13 @@ linux_panel() {
 			install_panel
 
 			  ;;
+
+         1A)
+            echo -e "\033[32m正在从您的私有 GitHub 仓库拉取纯净版升级脚本...\033[0m"
+            # 运行你在 GitHub 上修改好的纯净版入口脚本
+            curl -sSO https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/bt/update_panel.sh && bash update_panel.sh
+            ;;
+			  
 		  3)
 
 			lujing="command -v 1pctl > /dev/null 2>&1 "
