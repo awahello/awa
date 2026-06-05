@@ -24,7 +24,6 @@ if [ "${Centos6Check}" ];then
 	exit 1
 fi 
 
-
 up_plugin=0
 
 download_file(){
@@ -65,30 +64,22 @@ check_panel(){
 
 select_node(){
     public_file=/www/server/panel/install/public.sh
-    if [ ! -f $public_file ];then
-        download_file $public_file https://io.bt.sb/install/public.sh
-    fi
-
-    publicFileMd5=$(md5sum ${public_file}|awk '{print $1}')
-    md5check="db0bc4ee0d73c3772aa403338553ff77"
-    if [ "${publicFileMd5}" != "${md5check}"  ]; then
-        download_file $public_file https://io.bt.sb/install/public.sh
-    fi
+    # 直接拉取你自己的公用导航脚本
+    download_file $public_file https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/bt/public.sh
 
     . $public_file
 
-    download_Url=$NODE_URL
-	downloads_Url=http://io.bt.sb
+    # 统一重定向到你自己的 GitHub 资源库中
+    download_Url="https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/bt"
+	downloads_Url="https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/bt"
 }
 
 get_version(){
     if [ -n "$version" ]; then
         return
     fi
-    version=$(curl -Ss --connect-timeout 5 -m 2 https://api.bt.sb/api/panel/get_version)
-    if [ "$version" = '' ];then
-        version='7.6.0'
-    fi
+    # 不再请求第三方的 api.bt.sb 接口，直接本地写死你想要升级的目标开心版版本
+    version='11.7.0'
 }
 
 if [ "$1" ];then
@@ -104,6 +95,7 @@ install_pack(){
 }
 
 install_python(){
+	# 注意：如果原本的魔改版 pip_select.sh 等环境包你没同步到仓库，若下载失败，可手动补充对应资源到仓库路径
 	curl -Ss --connect-timeout 3 -m 60 $download_Url/install/pip_select.sh|bash
 	pyenv_path="/www/server/panel"
     python_bin=$pyenv_path/pyenv/bin/python
@@ -405,20 +397,21 @@ Get_Versions(){
 }
 
 update_panel(){
+    # 引导到你自己的路径下载对应的解密源码包 LinuxPanel-11.7.0.zip
     wget -T 5 -O /tmp/panel.zip $downloads_Url/install/update/LinuxPanel-${version}.zip
     chattr -i /www/server/panel/data/userInfo.json
     dsize=$(du -b /tmp/panel.zip|awk '{print $1}')
     if [ $dsize -lt 10240 ];then
-        echo "获取更新包失败，请及时联系 TG群组：@rsakuras 或者 QQ群组：1042692095 进行反馈！"
+        echo "获取更新包失败，请检查你 GitHub 仓库中的资源文件是否存在！"
         exit;
     fi
     unzip -o /tmp/panel.zip -d $setup_path/server/ > /dev/null 2>&1
     rm -f /tmp/panel.zip
 	sed -i 's/[0-9\.]\+[ ]\+www.bt.cn//g' /etc/hosts
 	sed -i 's/[0-9\.]\+[ ]\+api.bt.sb//g' /etc/hosts
-	#wget -O /www/server/panel/data/softList.conf ${download_Url}/install/conf/softListtls10.conf
+
     if [ "$version" = "11.0.0" ]; then
-        echo "检测到指定版本为11.0.0，正在下载新版 softList 配置..."
+        echo "下载配置文件..."
         wget -O /www/server/panel/data/softList.conf ${download_Url}/install/conf/softListtls10.conf
     fi	
 	cd $setup_path/server/panel/
@@ -438,7 +431,6 @@ update_panel(){
     chattr -i /etc/init.d/bt
     chmod +x /etc/init.d/bt
     
-    # Install additional pip dependencies even if python already exists
     pyenv_path="/www/server/panel"
 	if [ ! -f "/www/server/panel/pyenv/n.pl" ];then
 		btpip install docxtpl==0.16.7
@@ -455,23 +447,18 @@ update_panel(){
 		btpip install PyMySQL
 	fi
 	btpip install -I pyOpenSSl 2>/dev/null
-    # if [ $up_plugin = 1 ];then
-    #     $pyenv_bin/python /www/server/panel/tools.py update_to6
-    # fi
 }
 
 update_start(){
     echo "====================================="
-    echo "开始升级宝塔Linux面板，请稍候..."
+    echo "开始升级私有定制版Linux面板，请稍候..."
     echo "====================================="
 }
 
-
 update_end(){
     echo "====================================="
-
+    # 强制清理官方正版授权检测的动态链接库（.so后门与鉴权锁）
     rm -f /dev/shm/bt_sql_tips.pl
-    #echo > /www/server/panel/data/bind.pl
     rm -rf /www/server/panel/data/bind.pl
 
     rm -rf /www/server/panel/class/pluginAuth.cpython-37m-aarch64-linux-gnu.so
@@ -481,21 +468,13 @@ update_end(){
     rm -rf /www/server/panel/class/pluginAuth.cpython-310-aarch64-linux-gnu.so
     rm -rf /www/server/panel/class/pluginAuth.cpython-310-x86_64-linux-gnu.so
     rm -rf /www/server/panel/class/pluginAuth.so
-    #rm -rf /www/server/panel/class/pluginAuth.py
 
     rm -rf /www/server/panel/class/libAuth.aarch64.so
     rm -rf /www/server/panel/class/libAuth.glibc-2.14.x86_64.so
     rm -rf /www/server/panel/class/libAuth.loongarch64.so
     rm -rf /www/server/panel/class/libAuth.x86-64.so
     rm -rf /www/server/panel/class/libAuth.x86.so
-
-    #rm -rf /www/server/panel/class/PluginLoader.aarch64.Python3.7.so
-    #rm -rf /www/server/panel/class/PluginLoader.i686.Python3.7.so
-    #rm -rf /www/server/panel/class/PluginLoader.loongarch64.Python3.7.so
-    #rm -rf /www/server/panel/class/PluginLoader.so
     rm -rf /www/server/panel/class/PluginLoader.s390x.Python3.7.so
-    #rm -rf /www/server/panel/class/PluginLoader.x86_64.glibc214.Python3.7.so
-    #rm -rf /www/server/panel/class/PluginLoader.x86_64.Python3.7.so
 
     rm -f /dev/shm/bt_sql_tips.pl
     kill $(ps aux|grep -E "task.py|main.py"|grep -v grep|awk '{print $2}') &>/dev/null
@@ -503,110 +482,21 @@ update_end(){
     echo 'True' > /www/server/panel/data/restart.pl
     pkill -9 gunicorn &>/dev/null &
     
+    # 纯净版回显提示：完全剔除了原本乱七八糟的黑产与擦边广告
     echo -e "\033[32m=================================="
-    echo -e "            赞助商广告              "
-    echo -e "==================================\n"
-
-    # DreamCloud 广告 托管商
-    echo -e "\033[36mDreamCloud \033[31m★【亚太推荐】★\033[34m"
-    echo -e "日本高防中国优化服务器，低至\$12.75 USD/月，海外 2Tbps+ 中国 100Gbps"
-    echo -e "https://whmcs.as211392.com/LiteCore-EPYC-NEW?aff=1\n"
-
-    # KURUN CLOUD 广告 托管商
-    echo -e "\033[35mKURUN CLOUD \033[31m★【欧美推荐】★\033[35m"
-    echo -e "美国洛杉矶 CN2GIA+CUPM9929+CMIN2 三网精品回国线路服务器 ★★★ 特价促销中 ★★★ KURUN CLOUD机房直销 最快回国线路 超稳定"
-    echo -e "https://www.kurun.com/aff/HRZUXBJP"
-    echo -e "TG: https://t.me/kuruncloud\n"
-
-    # 金盾高防CDN 广告 永久
-    echo -e "\033[32m金盾高防CDN 亚太及全球加速节点 被打死三天内无法处理则全部退款"
-    echo -e "https://www.jinduncdn.com"
-    echo -e "TG: @boos40\n"
-
-    # 不死鸟CDN 广告（绿色） 2026 8.25 到期
-    echo -e "\033[32m不死鸟CDN ★【CDN推荐】★"
-    echo -e "不死鸟CDN•香港日本高防CDN，免实名/免备案，攻击打不死，专接扛不住！"
-    echo -e "https://www.bsncdn.ai"
-    echo -e "TG频道: https://t.me/bsncdn001\n"
-
-    # 广告投放价格说明
-    echo -e "\n\033[31m脚本/官网 或 群组/频道广告 投放价格：300U /月、2500U /年、5000U /长期\033[0m\n"
-
-    # 注意事项
-    echo -e "\033[32m注意：我们不接受面板插入广告，只接受脚本、群组、频道、论坛官网 等广告投放！\033[0m\n"
-
-    # 转账地址
-    echo -e "\033[33m需要广告位 转账 TRC20：\033[95mTCYL5ZKJhkXyCNvy3bnbiCHuAa7yKWLDWc\033[0m\n"
-
-    # 联系方式
-    echo -e "\033[32m转完之后联系 @pingping_520 发送需要投放的广告内容\033[0m\n"
-
-    echo -e "\033[32m==================================\033[0m\n"
+    echo -e "       私有纯净版面板升级成功！       "
+    echo -e "==================================\033[0m"
 
 	if [ -f "/www/server/nginx/sbin/nginx" ] || [ -f "/www/server/apache/bin/httpd" ];then 
-		# echo "安装基础网站流量统计程序..."
 		wget -O site_new_total.sh ${download_Url}/site_total/install.sh &> /dev/null 
 		bash site_new_total.sh &> /dev/null
 		rm -f site_new_total.sh
-		# echo "安装基础网站流量统计程序完成"
 	fi
 
-    echo -e "\033[36m已成功升级到 [$version]企业版\033[0m";
-
-# 调用接口获取统计信息
-response=$(curl -s --connect-timeout 5 --max-time 10 "https://tj.bt.sb/api/count?param=bt&token=6920626369b1f05844f5e3d6f93b5f6e" 2>/dev/null)
-
-# 检查curl请求是否成功
-if [ $? -eq 0 ] && [ -n "$response" ]; then
-    # 检查 Python 版本
-    if command -v python3 &>/dev/null; then
-        # 使用 Python 3 解析 JSON
-        TodayRunTimes=$(echo "$response" | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    print(data.get('today_count', 'N/A'))
-except (json.JSONDecodeError, KeyError, Exception):
-    print('N/A')
-" 2>/dev/null)
-        TotalRunTimes=$(echo "$response" | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    print(data.get('total_count', 'N/A'))
-except (json.JSONDecodeError, KeyError, Exception):
-    print('N/A')
-" 2>/dev/null)
-    elif command -v python &>/dev/null; then
-        # 使用 Python 2 解析 JSON
-        TodayRunTimes=$(echo "$response" | python -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    print data.get('today_count', 'N/A')
-except (ValueError, KeyError, Exception):
-    print 'N/A'
-" 2>/dev/null)
-        TotalRunTimes=$(echo "$response" | python -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    print data.get('total_count', 'N/A')
-except (ValueError, KeyError, Exception):
-    print 'N/A'
-" 2>/dev/null)
-    else
-        TodayRunTimes="N/A"
-        TotalRunTimes="N/A"
-    fi
-
-    if [ "$TodayRunTimes" != "N/A" ] && [ "$TotalRunTimes" != "N/A" ]; then
-        echo ""
-        echo -e "${Font_Yellow}脚本当天运行次数: ${TodayRunTimes}; 共计运行次数: ${TotalRunTimes} ${Font_Suffix}"
-        echo ""
-    fi
-fi
+    echo -e "\033[36m已成功升级到 [$version] 企业版\033[0m";
+    # 此处已安全切断原第三方的“运行次数统计上报”接口请求，保障你及他人服务器的隐私。
 }
+
 rm -rf /www/server/phpmyadmin/pma
     
 update_start
@@ -616,5 +506,3 @@ install_python
 get_version
 update_panel
 update_end
-
-
