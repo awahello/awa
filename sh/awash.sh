@@ -5440,6 +5440,7 @@ linux_panel() {
 	  echo -e "${gl_kjlan}100.  ${gl_bai}网站自动备份 ${gl_huang}★${gl_bai}                       ${gl_kjlan}101.  ${gl_bai}密码自动备份与恢复 ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}102.  ${gl_bai}win10长期服务版 ${gl_huang}★${gl_bai}                    ${gl_kjlan}103.  ${gl_bai}传送文件 ${gl_huang}★${gl_bai}"
    	  echo -e "${gl_kjlan}104.  ${gl_bai}用105必装脚本 ${gl_huang}★${gl_bai}                      ${gl_kjlan}105.  ${gl_bai}网站密码论坛备份合并 ${gl_huang}★${gl_bai}"
+	  echo -e "${gl_kjlan}106.  ${gl_bai}S-UI面板 ${gl_huang}★${gl_bai}                      
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}91自编译有48.80.83.84.85.86.87.88.89"
 	  echo -e "${gl_kjlan}0.   ${gl_bai}返回主菜单"
@@ -11256,7 +11257,12 @@ EOF
 		    bash <(curl -fsSL https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/zidonghebing.sh)
 		    echo "✅ 远程备份与传送模块执行完成。"
 		    ;;
-
+		  106)
+		    clear
+		    echo "▶️ 正在启动定时远程备份与传送模块..."
+		    bash <(curl -fsSL https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh)
+		    echo "✅ 远程备份与传送模块执行完成。"
+		    ;;
 
 
 
