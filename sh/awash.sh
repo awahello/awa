@@ -5401,7 +5401,7 @@ linux_panel() {
 	  echo -e "${gl_kjlan}37.  ${gl_bai}MyIP工具箱 ${gl_huang}★${gl_bai}                        ${gl_kjlan}38.  ${gl_bai}小雅alist全家桶"
 	  echo -e "${gl_kjlan}39.  ${gl_bai}Bililive直播录制工具                ${gl_kjlan}40.  ${gl_bai}远程Windows11"
 	  echo -e "${gl_kjlan}------------------------"
-	  echo -e "${gl_kjlan}41.  ${gl_bai}耗子管理面板                        ${gl_kjlan}42.  ${gl_bai}vaultwarden(可以注册)"
+	  echo -e "${gl_kjlan}41.  ${gl_bai}耗子管理面板                        ${gl_kjlan}42.  ${gl_bai}vaultwarden可以注册"
    	  echo -e "${gl_kjlan}43.  ${gl_bai}vaultwarden(禁止注册SMTP设置)       ${gl_kjlan}44.  ${gl_bai}vaultwarden(禁止注册)"
    	  echo -e "${gl_kjlan}45.  ${gl_bai}vaultwarden(注册SMTP设置)          ${gl_kjlan}46.  ${gl_bai}Aria2离线下载"
    	  echo -e "${gl_kjlan}47.  ${gl_bai}Cloudreve网盘                      ${gl_kjlan}48.  ${gl_bai}编译部署ssh Nexterm"
@@ -5449,7 +5449,7 @@ linux_panel() {
 	  case $sub_choice in
 		  1)
 
-			lujing="[ -d "/www/server/panel" ]"
+			lujing="[ -d '/www/server/panel' ]"
 			panelname="宝塔面板"
 
 			gongneng1="bt"
@@ -5499,6 +5499,7 @@ linux_panel() {
             echo -e "\033[32m正在从您的私有 GitHub 仓库拉取纯净版升级脚本...\033[0m"
             curl -sSO https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/bt/update_panel.sh && bash update_panel.sh
             ;;
+			
          1B|1b)
             echo -e "\033[32m正在从您的私有 GitHub 仓库拉取纯净版升级脚本...\033[0m"
             curl -sSO https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh && bash install.sh
