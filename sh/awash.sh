@@ -18,43 +18,337 @@ gl_kjlan='\033[96m'
 
 
 # 提示用户同意条款
+UserLicenseAgreement() {
+	clear
+	echo -e "${gl_kjlan}欢迎使用awa脚本工具箱${gl_bai}"
+	echo "首次使用脚本，请先阅读并同意用户许可协议。"
+	echo "用户许可协议: https://www.bing.com/"
+	echo -e "----------------------"
+	read -r -p "是否同意以上条款？(y/n): " user_input
 
-# 提示用户同意条款
-UserLicenseAgreement () {
-    clear
-    echo -e "${gl_kjlan}欢迎使用awa脚本工具箱${gl_bai}"
-    echo "首次使用脚本，请先阅读并同意用户许可协议。"
-    echo "用户许可协议: https://www.bing.com/"
-    echo "-----------------------------------"
-    read -r -p "是否同意以上条款？(y/n) :" user_input
 
-    if [ "$user_input" = "y" ] || [ "$user_input" = "Y" ]; then
-        sed -i 's/permission_granted="false"/permission_granted="true"/' "新建 文本文档.txt"
-    else
-        clear
-        exit
-    fi
+	if [ "$user_input" = "y" ] || [ "$user_input" = "Y" ]; then
+		send_stats "许可同意"
+		sed -i 's/^permission_granted="false"/permission_granted="true"/' ./awash.sh
+		sed -i 's/^permission_granted="false"/permission_granted="true"/' /usr/local/bin/k
+	else
+		send_stats "许可拒绝"
+		clear
+		exit
+	fi
 }
 
-# 获取IP地址函数
-ip_address () {
-    ipv4_address=\$(curl -s ipv4.ip.sb)
+
+
+
+
+
+
+
+
+CheckFirstRun_false
+
+
+
+
+
+ip_address() {
+ipv4_address=$(curl -s ipv4.ip.sb)
+ipv6_address=$(curl -s --max-time 1 ipv6.ip.sb)
 }
 
-# 核心安装面板函数（合并 CentOS/Ubuntu 判断，完美闭合 293 行的 fi）
-install_panel () {
-    if [ "\$system" == "CentOS" ]; then
-        \${centos_mingling}
-        \${centos_mingling2}
-    elif [ "\$system" == "Ubuntu" ] || [ "\$system" == "Debian" ]; then
-        \${ubuntu_mingling}
-        \${ubuntu_mingling2}
-    else
-        echo -e "\${gl_hong}不支持的系统！\${gl_bai}"
-        exit 1
-    fi
+
+
+install() {
+	if [ $# -eq 0 ]; then
+		echo "未提供软件包参数!"
+		return
+	fi
+
+	for package in "$@"; do
+		if ! command -v "$package" &>/dev/null; then
+			echo -e "${gl_huang}正在安装 $package...${gl_bai}"
+			if command -v dnf &>/dev/null; then
+				dnf -y update
+				dnf install -y epel-release
+				dnf install -y "$package"
+			elif command -v yum &>/dev/null; then
+				yum -y update
+				yum install -y epel-release
+				yum -y install "$package"
+			elif command -v apt &>/dev/null; then
+				apt update -y
+				apt install -y "$package"
+			elif command -v apk &>/dev/null; then
+				apk update
+				apk add "$package"
+			elif command -v pacman &>/dev/null; then
+				pacman -Syu --noconfirm
+				pacman -S --noconfirm "$package"
+			elif command -v zypper &>/dev/null; then
+				zypper refresh
+				zypper install -y "$package"
+			elif command -v opkg &>/dev/null; then
+				opkg update
+				opkg install "$package"
+			else
+				echo "未知的包管理器!"
+				return
+			fi
+		else
+			echo -e "${gl_lv}$package 已经安装${gl_bai}"
+		fi
+	done
+
+	return
 }
 
+
+install_dependency() {
+	  clear
+	  install wget socat unzip tar
+}
+
+
+remove() {
+	if [ $# -eq 0 ]; then
+		echo "未提供软件包参数!"
+		return
+	fi
+
+	for package in "$@"; do
+		echo -e "${gl_huang}正在卸载 $package...${gl_bai}"
+		if command -v dnf &>/dev/null; then
+			dnf remove -y "${package}"*
+		elif command -v yum &>/dev/null; then
+			yum remove -y "${package}"*
+		elif command -v apt &>/dev/null; then
+			apt purge -y "${package}"*
+		elif command -v apk &>/dev/null; then
+			apk del "${package}*"
+		elif command -v pacman &>/dev/null; then
+			pacman -Rns --noconfirm "${package}"
+		elif command -v zypper &>/dev/null; then
+			zypper remove -y "${package}"
+		elif command -v opkg &>/dev/null; then
+			opkg remove "${package}"
+		else
+			echo "未知的包管理器!"
+			return
+		fi
+	done
+
+	return
+}
+
+
+# 通用 systemctl 函数，适用于各种发行版
+systemctl() {
+	COMMAND="$1"
+	SERVICE_NAME="$2"
+
+	if command -v apk &>/dev/null; then
+		service "$SERVICE_NAME" "$COMMAND"
+	else
+		/bin/systemctl "$COMMAND" "$SERVICE_NAME"
+	fi
+}
+
+
+# 重启服务
+restart() {
+	systemctl restart "$1"
+	if [ $? -eq 0 ]; then
+		echo "$1 服务已重启。"
+	else
+		echo "错误：重启 $1 服务失败。"
+	fi
+}
+
+# 启动服务
+start() {
+	systemctl start "$1"
+	if [ $? -eq 0 ]; then
+		echo "$1 服务已启动。"
+	else
+		echo "错误：启动 $1 服务失败。"
+	fi
+}
+
+# 停止服务
+stop() {
+	systemctl stop "$1"
+	if [ $? -eq 0 ]; then
+		echo "$1 服务已停止。"
+	else
+		echo "错误：停止 $1 服务失败。"
+	fi
+}
+
+# 查看服务状态
+status() {
+	systemctl status "$1"
+	if [ $? -eq 0 ]; then
+		echo "$1 服务状态已显示。"
+	else
+		echo "错误：无法显示 $1 服务状态。"
+	fi
+}
+
+
+enable() {
+	SERVICE_NAME="$1"
+	if command -v apk &>/dev/null; then
+		rc-update add "$SERVICE_NAME" default
+	else
+	   /bin/systemctl enable "$SERVICE_NAME"
+	fi
+
+	echo "$SERVICE_NAME 已设置为开机自启。"
+}
+
+
+
+break_end() {
+	  echo -e "${gl_lv}操作完成${gl_bai}"
+	  echo "按任意键继续..."
+	  read -n 1 -s -r -p ""
+	  echo ""
+	  clear
+}
+
+awahello() {
+			cd ~
+			awahello_sh
+}
+
+
+
+check_port() {
+
+	docker rm -f nginx >/dev/null 2>&1
+
+	# 定义要检测的端口
+	PORT=80
+
+	# 检查端口占用情况
+	result=$(ss -tulpn | grep ":\b$PORT\b")
+
+	# 判断结果并输出相应信息
+	if [ -n "$result" ]; then
+			clear
+			echo -e "${gl_hong}注意: ${gl_bai}端口 ${gl_huang}$PORT${gl_bai} 已被占用，无法安装环境，卸载以下程序后重试！"
+			echo "$result"
+			send_stats "端口冲突无法安装建站环境"
+			break_end
+			linux_ldnmp
+
+	fi
+}
+
+
+
+
+
+install_add_docker_guanfang() {
+country=$(curl -s ipinfo.io/country)
+if [ "$country" = "CN" ]; then
+	cd ~
+	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/docker/install && chmod +x install
+	sh install --mirror Aliyun
+	rm -f install
+
+else
+	curl -fsSL https://get.docker.com | sh
+fi
+install_add_docker_cn
+k enable docker
+k start docker
+
+}
+
+
+
+install_add_docker() {
+	echo -e "${gl_huang}正在安装docker环境...${gl_bai}"
+	if  [ -f /etc/os-release ] && grep -q "Fedora" /etc/os-release; then
+		install_add_docker_guanfang
+	elif command -v dnf &>/dev/null; then
+		dnf update -y
+		dnf install -y yum-utils device-mapper-persistent-data lvm2
+		rm -f /etc/yum.repos.d/docker*.repo > /dev/null
+		country=$(curl -s ipinfo.io/country)
+		arch=$(uname -m)
+		if [ "$country" = "CN" ]; then
+			if [ "$arch" = "x86_64" ]; then
+				curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo | tee /etc/yum.repos.d/docker-ce.repo > /dev/null
+			elif [ "$arch" = "aarch64" ]; then
+				curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/centos/arm64/docker-ce.repo | tee /etc/yum.repos.d/docker-ce.repo > /dev/null
+			fi
+		else
+			if [ "$arch" = "x86_64" ]; then
+				yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo > /dev/null
+			elif [ "$arch" = "aarch64" ]; then
+				yum-config-manager --add-repo https://download.docker.com/linux/centos/arm64/docker-ce.repo > /dev/null
+			fi
+		fi
+		dnf install -y docker-ce docker-ce-cli containerd.io
+		install_add_docker_cn
+		k enable docker
+		k start docker
+
+	elif [ -f /etc/os-release ] && grep -q "Kali" /etc/os-release; then
+		apt update
+		apt upgrade -y
+		apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
+		rm -f /usr/share/keyrings/docker-archive-keyring.gpg
+		country=$(curl -s ipinfo.io/country)
+		arch=$(uname -m)
+		if [ "$country" = "CN" ]; then
+			if [ "$arch" = "x86_64" ]; then
+				sed -i '/^deb \[arch=amd64 signed-by=\/etc\/apt\/keyrings\/docker-archive-keyring.gpg\] https:\/\/mirrors.aliyun.com\/docker-ce\/linux\/debian bullseye stable/d' /etc/apt/sources.list.d/docker.list > /dev/null
+				mkdir -p /etc/apt/keyrings
+				curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker-archive-keyring.gpg > /dev/null
+				echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker-archive-keyring.gpg] https://mirrors.aliyun.com/docker-ce/linux/debian bullseye stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+			elif [ "$arch" = "aarch64" ]; then
+				sed -i '/^deb \[arch=arm64 signed-by=\/etc\/apt\/keyrings\/docker-archive-keyring.gpg\] https:\/\/mirrors.aliyun.com\/docker-ce\/linux\/debian bullseye stable/d' /etc/apt/sources.list.d/docker.list > /dev/null
+				mkdir -p /etc/apt/keyrings
+				curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker-archive-keyring.gpg > /dev/null
+				echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/docker-archive-keyring.gpg] https://mirrors.aliyun.com/docker-ce/linux/debian bullseye stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+			fi
+		else
+			if [ "$arch" = "x86_64" ]; then
+				sed -i '/^deb \[arch=amd64 signed-by=\/usr\/share\/keyrings\/docker-archive-keyring.gpg\] https:\/\/download.docker.com\/linux\/debian bullseye stable/d' /etc/apt/sources.list.d/docker.list > /dev/null
+				mkdir -p /etc/apt/keyrings
+				curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker-archive-keyring.gpg > /dev/null
+				echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+			elif [ "$arch" = "aarch64" ]; then
+				sed -i '/^deb \[arch=arm64 signed-by=\/usr\/share\/keyrings\/docker-archive-keyring.gpg\] https:\/\/download.docker.com\/linux\/debian bullseye stable/d' /etc/apt/sources.list.d/docker.list > /dev/null
+				mkdir -p /etc/apt/keyrings
+				curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker-archive-keyring.gpg > /dev/null
+				echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+			fi
+		fi
+		apt update
+		apt install -y docker-ce docker-ce-cli containerd.io
+		install_add_docker_cn
+		k enable docker
+		k start docker
+
+	elif command -v apt &>/dev/null || command -v yum &>/dev/null; then
+		install_add_docker_guanfang
+	else
+		k install docker docker-compose
+		install_add_docker_cn
+		k enable docker
+		k start docker
+	fi
+	sleep 2
+}
+
+
+install_docker() {
+	if ! command -v docker &>/dev/null; then
 		install_add_docker
 	else
 		echo -e "${gl_lv}Docker环境已经安装${gl_bai}"
@@ -92,22 +386,22 @@ while true; do
 			;;
 		2)
 			send_stats "启动指定容器"
-			read -e -p "请输入容器名(多个容器名请用空格分隔): " dockername
+			read -e -p "请输入容器名（多个容器名请用空格分隔）: " dockername
 			docker start $dockername
 			;;
 		3)
 			send_stats "停止指定容器"
-			read -e -p "请输入容器名(多个容器名请用空格分隔): " dockername
+			read -e -p "请输入容器名（多个容器名请用空格分隔）: " dockername
 			docker stop $dockername
 			;;
 		4)
 			send_stats "删除指定容器"
-			read -e -p "请输入容器名(多个容器名请用空格分隔): " dockername
+			read -e -p "请输入容器名（多个容器名请用空格分隔）: " dockername
 			docker rm -f $dockername
 			;;
 		5)
 			send_stats "重启指定容器"
-			read -e -p "请输入容器名(多个容器名请用空格分隔): " dockername
+			read -e -p "请输入容器名（多个容器名请用空格分隔）: " dockername
 			docker restart $dockername
 			;;
 		6)
@@ -120,7 +414,7 @@ while true; do
 			;;
 		8)
 			send_stats "删除所有容器"
-			read -e -p "$（echo -e "${gl_hong}注意: ${gl_bai}确定删除所有容器吗？（Y/N）: "）" choice
+			read -e -p "$(echo -e "${gl_hong}注意: ${gl_bai}确定删除所有容器吗？(Y/N): ")" choice
 			case "$choice" in
 			  [Yy])
 				docker rm -f $(docker ps -a -q)
@@ -156,11 +450,11 @@ while true; do
 			printf "%-25s %-25s %-25s\n" "容器名称" "网络名称" "IP地址"
 			for container_id in $container_ids; do
 				container_info=$(docker inspect --format '{{ .Name }}{{ range $network, $config := .NetworkSettings.Networks }} {{ $network }} {{ $config.IPAddress }}{{ end }}' "$container_id")
-				container_name=$（echo "$container_info" | awk '{print $1}'）
-				network_info=$（echo "$container_info" | cut -d' ' -f2-）
+				container_name=$(echo "$container_info" | awk '{print $1}')
+				network_info=$(echo "$container_info" | cut -d' ' -f2-)
 				while IFS= read -r line; do
-					network_name=$（echo "$line" | awk '{print $1}'）
-					ip_address=$（echo "$line" | awk '{print $2}'）
+					network_name=$(echo "$line" | awk '{print $1}')
+					ip_address=$(echo "$line" | awk '{print $2}')
 					printf "%-20s %-20s %-15s\n" "$container_name" "$network_name" "$ip_address"
 				done <<< "$network_info"
 			done
@@ -200,7 +494,7 @@ while true; do
 	case $sub_choice in
 		1)
 			send_stats "拉取镜像"
-			read -e -p "请输入镜像名(多个镜像名请用空格分隔): " imagenames
+			read -e -p "请输入镜像名（多个镜像名请用空格分隔）: " imagenames
 			for name in $imagenames; do
 				echo -e "${gl_huang}正在获取镜像: $name${gl_bai}"
 				docker pull $name
@@ -208,7 +502,7 @@ while true; do
 			;;
 		2)
 			send_stats "更新镜像"
-			read -e -p "请输入镜像名(多个镜像名请用空格分隔): " imagenames
+			read -e -p "请输入镜像名（多个镜像名请用空格分隔）: " imagenames
 			for name in $imagenames; do
 				echo -e "${gl_huang}正在更新镜像: $name${gl_bai}"
 				docker pull $name
@@ -216,14 +510,14 @@ while true; do
 			;;
 		3)
 			send_stats "删除镜像"
-			read -e -p "请输入镜像名(多个镜像名请用空格分隔): " imagenames
+			read -e -p "请输入镜像名（多个镜像名请用空格分隔）: " imagenames
 			for name in $imagenames; do
 				docker rmi -f $name
 			done
 			;;
 		4)
 			send_stats "删除所有镜像"
-			read -e -p "$（echo -e "${gl_hong}注意: ${gl_bai}确定删除所有镜像吗？（Y/N）: "）" choice
+			read -e -p "$(echo -e "${gl_hong}注意: ${gl_bai}确定删除所有镜像吗？(Y/N): ")" choice
 			case "$choice" in
 			  [Yy])
 				docker rmi -f $(docker images -q)
@@ -426,7 +720,7 @@ ldnmp_v() {
 
 	  # 获取nginx版本
 	  nginx_version=$(docker exec nginx nginx -v 2>&1)
-	  nginx_version=$（echo "$nginx_version" | grep -oP "nginx/\K[0-9]+\.[0-9]+\.[0-9]+"）
+	  nginx_version=$(echo "$nginx_version" | grep -oP "nginx/\K[0-9]+\.[0-9]+\.[0-9]+")
 	  echo -n -e "nginx : ${gl_huang}v$nginx_version${gl_bai}"
 
 	  # 获取mysql版本
@@ -626,8 +920,8 @@ install_certbot() {
 	existing_cron=$(crontab -l 2>/dev/null | grep -F "$cron_job")
 
 	# 如果不存在，则添加定时任务
-	if [ -z "$existing_cron' ]; then
-		（crontab -l 2>/dev/null; echo "$cron_job"） | crontab -
+	if [ -z "$existing_cron" ]; then
+		(crontab -l 2>/dev/null; echo "$cron_job") | crontab -
 		echo "续签任务已添加"
 	fi
 }
@@ -643,7 +937,7 @@ install_ssltls() {
 	  certbot_version=$(certbot --version 2>&1 | grep -oP "\d+\.\d+\.\d+")
 
 	  version_ge() {
-		  [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1' ]
+		  [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]
 	  }
 
 	  if version_ge "$certbot_version" "1.17.0"; then
@@ -693,7 +987,7 @@ ssl_ps() {
 	echo "------------------------"
 	for cert_dir in /etc/letsencrypt/live/*; do
 	  cert_file="$cert_dir/fullchain.pem"
-	  if [ -f "$cert_file' ]; then
+	  if [ -f "$cert_file" ]; then
 		domain=$(basename "$cert_dir")
 		expire_date=$(openssl x509 -noout -enddate -in "$cert_file" | awk -F'=' '{print $2}')
 		formatted_date=$(date -d "$expire_date" '+%Y-%m-%d')
@@ -726,7 +1020,7 @@ certs_status() {
 
 	sleep 1
 	file_path="/etc/letsencrypt/live/$yuming/fullchain.pem"
-	if [ -f "$file_path' ]; then
+	if [ -f "$file_path" ]; then
 		send_stats "域名证书申请成功"
 	else
 		send_stats "域名证书申请失败"
@@ -769,7 +1063,7 @@ add_yuming() {
 
 
 add_db() {
-	  dbname=$（echo "$yuming" | sed -e 's/[^A-Za-z0-9]/_/g'）
+	  dbname=$(echo "$yuming" | sed -e 's/[^A-Za-z0-9]/_/g')
 	  dbname="${dbname}"
 
 	  dbrootpasswd=$(grep -oP 'MYSQL_ROOT_PASSWORD:\s*\K.*' /home/web/docker-compose.yml | tr -d '[:space:]')
@@ -843,19 +1137,19 @@ cf_purge_cache() {
   local ZONE_IDS
 
   # 检查配置文件是否存在
-  if [ -f "$CONFIG_FILE' ]; then
+  if [ -f "$CONFIG_FILE" ]; then
 	# 从配置文件读取 API_TOKEN 和 zone_id
 	read API_TOKEN EMAIL ZONE_IDS < "$CONFIG_FILE"
 	# 将 ZONE_IDS 转换为数组
 	ZONE_IDS=($ZONE_IDS)
   else
 	# 提示用户是否清理缓存
-	read -p "需要清理 Cloudflare 的缓存吗？(y/n): " answer
-	if [[ "$answer" == "y' ]]; then
+	read -p "需要清理 Cloudflare 的缓存吗？（y/n）: " answer
+	if [[ "$answer" == "y" ]]; then
 	  echo "CF信息保存在$CONFIG_FILE，可以后期修改CF信息"
 	  read -p "请输入你的 API_TOKEN: " API_TOKEN
 	  read -p "请输入你的CF用户名: " EMAIL
-	  read -p "请输入 zone_id(多个用空格分隔): " -a ZONE_IDS
+	  read -p "请输入 zone_id（多个用空格分隔）: " -a ZONE_IDS
 
 	  mkdir -p /home/web/config/
 	  echo "$API_TOKEN $EMAIL ${ZONE_IDS[*]}" > "$CONFIG_FILE"
@@ -882,7 +1176,7 @@ preheat_cache() {
 	local url_file="/home/web/config/urls.txt"
 
 	# 检查文件是否存在
-	if [[ ! -f "$url_file' ]]; then
+	if [[ ! -f "$url_file" ]]; then
 		return
 	fi
 
@@ -925,13 +1219,13 @@ web_cache() {
 has_ipv4_has_ipv6() {
 
 ip_address
-if [ -z "$ipv4_address' ]; then
+if [ -z "$ipv4_address" ]; then
 	has_ipv4=false
 else
 	has_ipv4=true
 fi
 
-if [ -z "$ipv6_address' ]; then
+if [ -z "$ipv6_address" ]; then
 	has_ipv6=false
 else
 	has_ipv6=true
@@ -1143,7 +1437,7 @@ f2b_sshd() {
 
 server_reboot() {
 
-	read -e -p "$（echo -e "${gl_huang}提示: ${gl_bai}现在重启服务器吗？（Y/N）: "）" rboot
+	read -e -p "$(echo -e "${gl_huang}提示: ${gl_bai}现在重启服务器吗？(Y/N): ")" rboot
 	case "$rboot" in
 	  [Yy])
 		echo "已重启"
@@ -1846,7 +2140,7 @@ dd_xitong() {
 				dd_xitong_4
 				URL="https://massgrave.dev/windows_7_links"
 				web_content=$(wget -q -O - "$URL")
-				iso_link=$（echo "$web_content" | grep -oP '（?<=href="）[^"]*cn[^"]*windows_7[^"]*professional[^"]*x64[^"]*\.iso'）
+				iso_link=$(echo "$web_content" | grep -oP '(?<=href=")[^"]*cn[^"]*windows_7[^"]*professional[^"]*x64[^"]*\.iso')
 				# bash reinstall.sh windows --image-name 'Windows 7 Professional' --lang zh-cn
 				# bash reinstall.sh windows --iso='$iso_link' --image-name='Windows 7 PROFESSIONAL'
 				bash reinstall.sh windows --iso="$iso_link" --image-name='Windows 7 PROFESSIONAL'
@@ -1858,7 +2152,7 @@ dd_xitong() {
 				dd_xitong_4
 				URL="https://massgrave.dev/windows_server_links"
 				web_content=$(wget -q -O - "$URL")
-				iso_link=$（echo "$web_content" | grep -oP '（?<=href="）[^"]*cn[^"]*windows_server[^"]*2022[^"]*x64[^"]*\.iso'）
+				iso_link=$(echo "$web_content" | grep -oP '(?<=href=")[^"]*cn[^"]*windows_server[^"]*2022[^"]*x64[^"]*\.iso')
 				bash reinstall.sh windows --iso="$iso_link" --image-name='Windows Server 2022 SERVERDATACENTER'
 				reboot
 				exit
@@ -1894,7 +2188,7 @@ bbrv3() {
 		  send_stats "bbrv3管理"
 
 		  cpu_arch=$(uname -m)
-		  if [ "$cpu_arch" = "aarch64' ]; then
+		  if [ "$cpu_arch" = "aarch64" ]; then
 			bash <(curl -sL jhb.ovh/jb/bbrv3arm.sh)
 			break_end
 			linux_Settings
@@ -1972,7 +2266,7 @@ bbrv3() {
 			[Yy])
 			if [ -r /etc/os-release ]; then
 				. /etc/os-release
-				if [ "$ID" != "debian' ] && [ "$ID" != "ubuntu' ]; then
+				if [ "$ID" != "debian" ] && [ "$ID" != "ubuntu" ]; then
 					echo "当前环境不支持，仅支持Debian和Ubuntu系统"
 					break_end
 					linux_Settings
@@ -2035,10 +2329,10 @@ elrepo_install() {
 	echo "检测到的操作系统: $os_name $os_version"
 	# 根据系统版本安装对应的 ELRepo 仓库配置
 	if [[ "$os_version" == 8 ]]; then
-		echo "安装 ELRepo 仓库配置 （版本 8）..."
+		echo "安装 ELRepo 仓库配置 (版本 8)..."
 		yum -y install https://www.elrepo.org/elrepo-release-8.el8.elrepo.noarch.rpm
 	elif [[ "$os_version" == 9 ]]; then
-		echo "安装 ELRepo 仓库配置 （版本 9）..."
+		echo "安装 ELRepo 仓库配置 (版本 9)..."
 		yum -y install https://www.elrepo.org/elrepo-release-9.el9.elrepo.noarch.rpm
 	else
 		echo "不支持的系统版本：$os_version"
@@ -2220,7 +2514,7 @@ clamav() {
 						;;
 					3)
 					  send_stats "自定义目录扫描"
-					  read -e -p "请输入要扫描的目录，用空格分隔(例如：/etc /var /usr /home /root): " directories
+					  read -e -p "请输入要扫描的目录，用空格分隔（例如：/etc /var /usr /home /root）: " directories
 					  install_docker
 					  clamav_freshclam
 					  clamav_scan $directories
@@ -2678,7 +2972,7 @@ linux_trash() {
 		;;
 	  3)
 		read -e -p "输入要还原的文件名: " file_to_restore
-		if [ -e "$TRASH_DIR/$file_to_restore' ]; then
+		if [ -e "$TRASH_DIR/$file_to_restore" ]; then
 		  mv "$TRASH_DIR/$file_to_restore" "$HOME/"
 		  echo "$file_to_restore 已还原到主目录。"
 		else
@@ -2687,7 +2981,7 @@ linux_trash() {
 		;;
 	  4)
 		read -e -p "确认清空回收站？[y/n]: " confirm
-		if [[ "$confirm" == "y' ]]; then
+		if [[ "$confirm" == "y" ]]; then
 		  trash-empty
 		  echo "回收站已清空。"
 		fi
@@ -2721,9 +3015,9 @@ linux_ps() {
 	disk_info=$(df -h | awk '$NF=="/"{printf "%s/%s (%s)", $3, $2, $5}')
 
 	ipinfo=$(curl -s ipinfo.io)
-	country=$（echo "$ipinfo" | grep 'country' | awk -F': ' '{print $2}' | tr -d '",'）
-	city=$（echo "$ipinfo" | grep 'city' | awk -F': ' '{print $2}' | tr -d '",'）
-	isp_info=$（echo "$ipinfo" | grep 'org' | awk -F': ' '{print $2}' | tr -d '",'）
+	country=$(echo "$ipinfo" | grep 'country' | awk -F': ' '{print $2}' | tr -d '",')
+	city=$(echo "$ipinfo" | grep 'city' | awk -F': ' '{print $2}' | tr -d '",')
+	isp_info=$(echo "$ipinfo" | grep 'org' | awk -F': ' '{print $2}' | tr -d '",')
 
 
 	cpu_arch=$(uname -m)
@@ -3007,7 +3301,7 @@ linux_tools() {
 
 		  32)
 			  clear
-			  send_stats "全部安装(不含游戏和屏保)"
+			  send_stats "全部安装（不含游戏和屏保）"
 			  install curl wget sudo socat htop iftop unzip tar tmux ffmpeg btop ranger ncdu fzf vim nano git
 			  ;;
 
@@ -3020,13 +3314,13 @@ linux_tools() {
 
 		  41)
 			  clear
-			  read -e -p "请输入安装的工具名(wget curl sudo htop): " installname
+			  read -e -p "请输入安装的工具名（wget curl sudo htop）: " installname
 			  install $installname
 			  send_stats "安装指定软件"
 			  ;;
 		  42)
 			  clear
-			  read -e -p "请输入卸载的工具名(htop ufw tmux cmatrix): " removename
+			  read -e -p "请输入卸载的工具名（htop ufw tmux cmatrix）: " removename
 			  remove $removename
 			  send_stats "卸载指定软件"
 			  ;;
@@ -3052,7 +3346,7 @@ linux_tools() {
 linux_bbr() {
 	clear
 	send_stats "bbr管理"
-	if [ -f "/etc/alpine-release' ]; then
+	if [ -f "/etc/alpine-release" ]; then
 		while true; do
 			  clear
 			  congestion_algorithm=$(sysctl -n net.ipv4.tcp_congestion_control)
@@ -3184,12 +3478,12 @@ linux_docker() {
 				  for container_id in $container_ids; do
 					  container_info=$(docker inspect --format '{{ .Name }}{{ range $network, $config := .NetworkSettings.Networks }} {{ $network }} {{ $config.IPAddress }}{{ end }}' "$container_id")
 
-					  container_name=$（echo "$container_info" | awk '{print $1}'）
-					  network_info=$（echo "$container_info" | cut -d' ' -f2-）
+					  container_name=$(echo "$container_info" | awk '{print $1}')
+					  network_info=$(echo "$container_info" | cut -d' ' -f2-)
 
 					  while IFS= read -r line; do
-						  network_name=$（echo "$line" | awk '{print $1}'）
-						  ip_address=$（echo "$line" | awk '{print $2}'）
+						  network_name=$(echo "$line" | awk '{print $1}')
+						  ip_address=$(echo "$line" | awk '{print $2}')
 
 						  printf "%-20s %-20s %-15s\n" "$container_name" "$network_name" "$ip_address"
 					  done <<< "$network_info"
@@ -3216,7 +3510,7 @@ linux_docker() {
 					  2)
 						  send_stats "加入网络"
 						  read -e -p "加入网络名: " dockernetwork
-						  read -e -p "那些容器加入该网络(多个容器名请用空格分隔): " dockernames
+						  read -e -p "那些容器加入该网络（多个容器名请用空格分隔）: " dockernames
 
 						  for dockername in $dockernames; do
 							  docker network connect $dockernetwork $dockername
@@ -3225,7 +3519,7 @@ linux_docker() {
 					  3)
 						  send_stats "加入网络"
 						  read -e -p "退出网络名: " dockernetwork
-						  read -e -p "那些容器退出该网络(多个容器名请用空格分隔): " dockernames
+						  read -e -p "那些容器退出该网络（多个容器名请用空格分隔）: " dockernames
 
 						  for dockername in $dockernames; do
 							  docker network disconnect $dockernetwork $dockername
@@ -3274,7 +3568,7 @@ linux_docker() {
 
 						  ;;
 					  2)
-						  read -e -p "输入删除卷名(多个卷名请用空格分隔): " dockerjuans
+						  read -e -p "输入删除卷名（多个卷名请用空格分隔）: " dockerjuans
 
 						  for dockerjuan in $dockerjuans; do
 							  docker volume rm $dockerjuan
@@ -3284,7 +3578,7 @@ linux_docker() {
 
 					   3)
 						  send_stats "删除所有卷"
-						  read -e -p "$（echo -e "${gl_hong}注意: ${gl_bai}确定删除所有未使用的卷吗？（Y/N）: "）" choice
+						  read -e -p "$(echo -e "${gl_hong}注意: ${gl_bai}确定删除所有未使用的卷吗？(Y/N): ")" choice
 						  case "$choice" in
 							[Yy])
 							  docker volume prune -f
@@ -3309,7 +3603,7 @@ linux_docker() {
 		  7)
 			  clear
 			  send_stats "Docker清理"
-			  read -e -p "$（echo -e "${gl_huang}提示: ${gl_bai}将清理无用的镜像容器网络，包括停止的容器，确定清理吗？（Y/N）: "）" choice
+			  read -e -p "$(echo -e "${gl_huang}提示: ${gl_bai}将清理无用的镜像容器网络，包括停止的容器，确定清理吗？(Y/N): ")" choice
 			  case "$choice" in
 				[Yy])
 				  docker system prune -af --volumes
@@ -3349,7 +3643,7 @@ linux_docker() {
 		  20)
 			  clear
 			  send_stats "Docker卸载"
-			  read -e -p "$（echo -e "${gl_hong}注意: ${gl_bai}确定卸载docker环境吗？（Y/N）: "）" choice
+			  read -e -p "$(echo -e "${gl_hong}注意: ${gl_bai}确定卸载docker环境吗？(Y/N): ")" choice
 			  case "$choice" in
 				[Yy])
 				  docker rm $(docker ps -a -q) && docker rmi $(docker images -q) && docker network prune
@@ -3593,13 +3887,13 @@ linux_Oracle() {
 				  read -e -p "请输入CPU核心数 [默认: $DEFAULT_CPU_CORE]: " cpu_core
 				  cpu_core=${cpu_core:-$DEFAULT_CPU_CORE}
 
-				  read -e -p "请输入CPU占用百分比范围(例如10-20) [默认: $DEFAULT_CPU_UTIL]: " cpu_util
+				  read -e -p "请输入CPU占用百分比范围（例如10-20） [默认: $DEFAULT_CPU_UTIL]: " cpu_util
 				  cpu_util=${cpu_util:-$DEFAULT_CPU_UTIL}
 
 				  read -e -p "请输入内存占用百分比 [默认: $DEFAULT_MEM_UTIL]: " mem_util
 				  mem_util=${mem_util:-$DEFAULT_MEM_UTIL}
 
-				  read -e -p "请输入Speedtest间隔时间(秒) [默认: $DEFAULT_SPEEDTEST_INTERVAL]: " speedtest_interval
+				  read -e -p "请输入Speedtest间隔时间（秒） [默认: $DEFAULT_SPEEDTEST_INTERVAL]: " speedtest_interval
 				  speedtest_interval=${speedtest_interval:-$DEFAULT_SPEEDTEST_INTERVAL}
 
 				  # 运行Docker容器
@@ -3633,7 +3927,7 @@ linux_Oracle() {
 		  echo "重装系统"
 		  echo "--------------------------------"
     		  echo "原地址"
-    		  echo "			  bash <（wget --no-check-certificate -qO- "${gh_proxy}https://raw.githubusercontent.com/MoeClub/Note/master/InstallNET.sh"） $xitong -v 64 -p $vpspasswd -port 22"
+    		  echo "			  bash <(wget --no-check-certificate -qO- "${gh_proxy}https://raw.githubusercontent.com/MoeClub/Note/master/InstallNET.sh") $xitong -v 64 -p $vpspasswd -port 22"
     		  echo "--------------------------------"
 		  echo -e "${gl_hong}注意: ${gl_bai}重装有风险失联，不放心者慎用。重装预计花费15分钟，请提前备份数据。"
 		  read -e -p "确定继续吗？(Y/N): " choice
@@ -3785,7 +4079,7 @@ linux_ldnmp() {
 	  unzip latest.zip
 	  rm latest.zip
 
-	  echo "define（'FS_METHOD', 'direct'）; define（'WP_REDIS_HOST', 'redis'）; define（'WP_REDIS_PORT', '6379'）;" >> /home/web/html/$yuming/wordpress/wp-config-sample.php
+	  echo "define('FS_METHOD', 'direct'); define('WP_REDIS_HOST', 'redis'); define('WP_REDIS_PORT', '6379');" >> /home/web/html/$yuming/wordpress/wp-config-sample.php
 
 	  restart_ldnmp
 
@@ -4049,7 +4343,7 @@ linux_ldnmp() {
 	  echo "目前只允许上传zip格式的源码包，请将源码包放到/home/web/html/${yuming}目录下"
 	  read -e -p "也可以输入下载链接，远程下载源码包，直接回车将跳过远程下载： " url_download
 
-	  if [ -n "$url_download' ]; then
+	  if [ -n "$url_download" ]; then
 		  wget "$url_download"
 	  fi
 
@@ -4061,7 +4355,7 @@ linux_ldnmp() {
 	  echo "-------------"
 	  find "$(realpath .)" -name "index.php" -print
 
-	  read -e -p "请输入index.php的路径，类似(/home/web/html/$yuming/wordpress/)： " index_lujing
+	  read -e -p "请输入index.php的路径，类似（/home/web/html/$yuming/wordpress/）： " index_lujing
 
 	  sed -i "s#root /var/www/html/$yuming/#root $index_lujing#g" /home/web/conf.d/$yuming.conf
 	  sed -i "s#/home/web/#/var/www/#g" /home/web/conf.d/$yuming.conf
@@ -4091,8 +4385,8 @@ linux_ldnmp() {
 	  echo "已经安装的扩展"
 	  docker exec php php -m
 
-	  read -e -p "$（echo -e "输入需要安装的扩展名称，如 ${gl_huang}SourceGuardian imap ftp${gl_bai} 等等。直接回车将跳过安装 ： "）" php_extensions
-	  if [ -n "$php_extensions' ]; then
+	  read -e -p "$(echo -e "输入需要安装的扩展名称，如 ${gl_huang}SourceGuardian imap ftp${gl_bai} 等等。直接回车将跳过安装 ： ")" php_extensions
+	  if [ -n "$php_extensions" ]; then
 		  docker exec $PHP_Version install-php-extensions $php_extensions
 	  fi
 
@@ -4119,7 +4413,7 @@ linux_ldnmp() {
 			  read -e -p "也可以输入下载链接，远程下载备份数据，直接回车将跳过远程下载： " url_download_db
 
 			  cd /home/
-			  if [ -n "$url_download_db' ]; then
+			  if [ -n "$url_download_db" ]; then
 				  wget "$url_download_db"
 			  fi
 			  gunzip $(ls -t *.gz | head -n 1)
@@ -4164,7 +4458,7 @@ linux_ldnmp() {
 
 	  clear
 	  nginx_version=$(docker exec nginx nginx -v 2>&1)
-	  nginx_version=$（echo "$nginx_version" | grep -oP "nginx/\K[0-9]+\.[0-9]+\.[0-9]+"）
+	  nginx_version=$(echo "$nginx_version" | grep -oP "nginx/\K[0-9]+\.[0-9]+\.[0-9]+")
 	  echo "nginx已安装完成"
 	  echo -e "当前版本: ${gl_huang}v$nginx_version${gl_bai}"
 	  echo ""
@@ -4264,7 +4558,7 @@ linux_ldnmp() {
 	  echo "目前只允许上传zip格式的源码包，请将源码包放到/home/web/html/${yuming}目录下"
 	  read -e -p "也可以输入下载链接，远程下载源码包，直接回车将跳过远程下载： " url_download
 
-	  if [ -n "$url_download' ]; then
+	  if [ -n "$url_download" ]; then
 		  wget "$url_download"
 	  fi
 
@@ -4276,7 +4570,7 @@ linux_ldnmp() {
 	  echo "-------------"
 	  find "$(realpath .)" -name "index.html" -print
 
-	  read -e -p "请输入index.html的路径，类似(/home/web/html/$yuming/index/)： " index_lujing
+	  read -e -p "请输入index.html的路径，类似（/home/web/html/$yuming/index/）： " index_lujing
 
 	  sed -i "s#root /var/www/html/$yuming/#root $index_lujing#g" /home/web/conf.d/$yuming.conf
 	  sed -i "s#/home/web/#/var/www/#g" /home/web/conf.d/$yuming.conf
@@ -4344,7 +4638,7 @@ linux_ldnmp() {
 		echo "------------------------"
 		for cert_file in /home/web/certs/*_cert.pem; do
 		  domain=$(basename "$cert_file" | sed 's/_cert.pem//')
-		  if [ -n "$domain' ]; then
+		  if [ -n "$domain" ]; then
 			expire_date=$(openssl x509 -noout -enddate -in "$cert_file" | awk -F'=' '{print $2}')
 			formatted_date=$(date -d "$expire_date" '+%Y-%m-%d')
 			printf "%-30s%s\n" "$domain" "$formatted_date"
@@ -4398,7 +4692,7 @@ linux_ldnmp() {
 				# mysql替换
 				add_db
 
-				odd_dbname=$（echo "$oddyuming" | sed -e 's/[^A-Za-z0-9]/_/g'）
+				odd_dbname=$(echo "$oddyuming" | sed -e 's/[^A-Za-z0-9]/_/g')
 				odd_dbname="${odd_dbname}"
 
 				docker exec mysql mysqldump -u root -p"$dbrootpasswd" $odd_dbname | docker exec -i mysql mysql -u root -p"$dbrootpasswd" $dbname
@@ -4507,12 +4801,12 @@ linux_ldnmp() {
 		case "$choice" in
 		  [Yy])
 			read -e -p "请输入远端服务器IP:  " remote_ip
-			if [ -z "$remote_ip' ]; then
+			if [ -z "$remote_ip" ]; then
 			  echo "错误: 请输入远端服务器IP。"
 			  continue
 			fi
 			latest_tar=$(ls -t /home/*.tar.gz | head -1)
-			if [ -n "$latest_tar' ]; then
+			if [ -n "$latest_tar" ]; then
 			  ssh-keygen -f "/root/.ssh/known_hosts" -R "$remote_ip"
 			  sleep 2  # 添加等待时间
 			  scp -o StrictHostKeyChecking=no "$latest_tar" "root@$remote_ip:/home/"
@@ -4553,12 +4847,12 @@ linux_ldnmp() {
 		  1)
 			  check_crontab_installed
 			  read -e -p "选择每周备份的星期几 (0-6，0代表星期日): " weekday
-			  （crontab -l ; echo "0 0 * * $weekday ./${useip}_beifen.sh"） | crontab - > /dev/null 2>&1
+			  (crontab -l ; echo "0 0 * * $weekday ./${useip}_beifen.sh") | crontab - > /dev/null 2>&1
 			  ;;
 		  2)
 			  check_crontab_installed
-			  read -e -p "选择每天备份的时间(小时，0-23): " hour
-			  （crontab -l ; echo "0 $hour * * * ./${useip}_beifen.sh"） | crontab - > /dev/null 2>&1
+			  read -e -p "选择每天备份的时间（小时，0-23）: " hour
+			  (crontab -l ; echo "0 $hour * * * ./${useip}_beifen.sh") | crontab - > /dev/null 2>&1
 			  ;;
 		  *)
 			  break  # 跳出
@@ -4579,17 +4873,17 @@ linux_ldnmp() {
 	  echo ""
 	  read -e -p  "回车键还原最新的备份，输入备份文件名还原指定的备份，输入0退出：" filename
 
-	  if [ "$filename" == "0' ]; then
+	  if [ "$filename" == "0" ]; then
 		  break_end
 		  linux_ldnmp
 	  fi
 
 	  # 如果用户没有输入文件名，使用最新的压缩包
-	  if [ -z "$filename' ]; then
+	  if [ -z "$filename" ]; then
 		  filename=$(ls -t /home/*.tar.gz | head -1)
 	  fi
 
-	  if [ -n "$filename' ]; then
+	  if [ -n "$filename" ]; then
 		  cd /home/web/ > /dev/null 2>&1
 		  docker compose down > /dev/null 2>&1
 		  rm -rf /home/web > /dev/null 2>&1
@@ -4752,8 +5046,8 @@ linux_ldnmp() {
 
 					  existing_cron=$(crontab -l 2>/dev/null | grep -F "$cron_job")
 
-					  if [ -z "$existing_cron' ]; then
-						  （crontab -l 2>/dev/null; echo "$cron_job"） | crontab -
+					  if [ -z "$existing_cron" ]; then
+						  (crontab -l 2>/dev/null; echo "$cron_job") | crontab -
 						  echo "高负载自动开盾脚本已添加"
 					  else
 						  echo "自动开盾脚本已存在，无需添加"
@@ -4767,7 +5061,7 @@ linux_ldnmp() {
 					  echo "无效的选择，请重新输入。"
 					  ;;
 			  esac
-		elif [ -x "$(command -v fail2ban-client)' ] ; then
+		elif [ -x "$(command -v fail2ban-client)" ] ; then
 			clear
 			echo "卸载旧版fail2ban"
 			read -e -p "确定继续吗？(Y/N): " choice
@@ -4818,7 +5112,7 @@ linux_ldnmp() {
 			  send_stats "优化LDNMP环境"
 			  echo "优化LDNMP环境"
 			  echo "------------------------"
-			  echo "1. 标准模式              2. 高性能模式 （推荐2H2G以上）"
+			  echo "1. 标准模式              2. 高性能模式 (推荐2H2G以上)"
 			  echo "------------------------"
 			  echo "0. 退出"
 			  echo "------------------------"
@@ -4922,7 +5216,7 @@ linux_ldnmp() {
 
 			  2)
 			  ldnmp_pods="mysql"
-			  read -e -p "请输入${ldnmp_pods}版本号 (如: 8.0 8.3 8.4 9.0 9.5)(回车获取最新版): " version
+			  read -e -p "请输入${ldnmp_pods}版本号 （如: 8.0 8.3 8.4 9.0 9.5）（回车获取最新版）: " version
 			  version=${version:-latest}
 
 			  cd /home/web/
@@ -4939,7 +5233,7 @@ linux_ldnmp() {
 				  ;;
 			  3)
 			  ldnmp_pods="php"
-			  read -e -p "请输入${ldnmp_pods}版本号 (如: 7.4 8.0 8.1 8.2 8.3 8.4 8.5)(回车获取最新版): " version
+			  read -e -p "请输入${ldnmp_pods}版本号 （如: 7.4 8.0 8.1 8.2 8.3 8.4 8.5）（回车获取最新版）: " version
 			  version=${version:-8.3}
 			  cd /home/web/
 			  cp /home/web/docker-compose.yml /home/web/docker-compose1.yml
@@ -5002,9 +5296,9 @@ linux_ldnmp() {
 
 				  ;;
 			  5)
-				read -e -p "$（echo -e "${gl_huang}提示: ${gl_bai}长时间不更新环境的用户，请慎重更新LDNMP环境，会有数据库更新失败的风险。确定更新LDNMP环境吗？（Y/N）: "）" choice
+				read -e -p "$(echo -e "${gl_huang}提示: ${gl_bai}长时间不更新环境的用户，请慎重更新LDNMP环境，会有数据库更新失败的风险。确定更新LDNMP环境吗？(Y/N): ")" choice
 				case "$choice" in
-				  [Yy]）
+				  [Yy])
 					send_stats "完整更新LDNMP环境"
 					cd /home/web/
 					docker compose down
@@ -5016,19 +5310,19 @@ linux_ldnmp() {
 					install_certbot
 					install_ldnmp
 					;;
-				  *）
+				  *)
 					;;
 				esac
 				  ;;
 
-			  6）
+			  6)
 			  phpmyadmin_upgrade
 				  ;;
 
-			  0）
+			  0)
 				  break
 				  ;;
-			  *）
+			  *)
 				  echo "无效的选择，请重新输入。"
 				  ;;
 		  esac
@@ -5038,12 +5332,12 @@ linux_ldnmp() {
 
 	  ;;
 
-	38）
+	38)
 		root_use
 		send_stats "卸载LDNMP环境"
-		read -e -p "$（echo -e "${gl_hong}强烈建议：${gl_bai}先备份全部网站数据，再卸载LDNMP环境。确定删除所有网站数据吗？（Y/N）: "）" choice
+		read -e -p "$(echo -e "${gl_hong}强烈建议：${gl_bai}先备份全部网站数据，再卸载LDNMP环境。确定删除所有网站数据吗？(Y/N): ")" choice
 		case "$choice" in
-		  [Yy]）
+		  [Yy])
 			cd /home/web/
 			docker compose down
 			docker compose down --rmi all
@@ -5051,20 +5345,20 @@ linux_ldnmp() {
 			docker compose -f docker-compose.phpmyadmin.yml down --rmi all > /dev/null 2>&1
 			rm -rf /home/web
 			;;
-		  [Nn]）
+		  [Nn])
 
 			;;
-		  *）
+		  *)
 			echo "无效的选择，请输入 Y 或 N。"
 			;;
 		esac
 		;;
 
-	0）
+	0)
 		awahello
 	  ;;
 
-	*）
+	*)
 		echo "无效的输入!"
 	esac
 	break_end
@@ -5075,7 +5369,7 @@ linux_ldnmp() {
 
 
 
-linux_panel（） {
+linux_panel() {
 
 	while true; do
 	  clear
@@ -5083,7 +5377,7 @@ linux_panel（） {
 	  echo -e "▶ 面板工具"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}1.   ${gl_bai}宝塔面板官方版                      ${gl_kjlan}2.   ${gl_bai}aaPanel宝塔国际版"
-	  echo -e "${gl_kjlan}1A.  ${gl_bai}升级宝塔面板开心企业版（仅升级）"     ${gl_kjlan}1B.  ${gl_bai}S-UI面板"    
+	  echo -e "${gl_kjlan}1A.   ${gl_bai}宝塔面板升级开心企业版"     
 	  echo -e "${gl_kjlan}3.   ${gl_bai}1Panel新一代管理面板                ${gl_kjlan}4.   ${gl_bai}NginxProxyManager可视化面板"
 	  echo -e "${gl_kjlan}5.   ${gl_bai}哪吒探针备份与恢复                    ${gl_kjlan}6.   ${gl_bai}Ubuntu远程桌面网页版3006端口"
 	  echo -e "${gl_kjlan}7.   ${gl_bai}哪吒探针VPS监控面板                 ${gl_kjlan}8.   ${gl_bai}QB离线BT磁力下载面板"
@@ -5107,9 +5401,9 @@ linux_panel（） {
 	  echo -e "${gl_kjlan}37.  ${gl_bai}MyIP工具箱 ${gl_huang}★${gl_bai}                        ${gl_kjlan}38.  ${gl_bai}小雅alist全家桶"
 	  echo -e "${gl_kjlan}39.  ${gl_bai}Bililive直播录制工具                ${gl_kjlan}40.  ${gl_bai}远程Windows11"
 	  echo -e "${gl_kjlan}------------------------"
-	  echo -e "${gl_kjlan}41.  ${gl_bai}耗子管理面板                        ${gl_kjlan}42.  ${gl_bai}vaultwarden可以注册"
-   	  echo -e "${gl_kjlan}43.  ${gl_bai}vaultwarden禁止注册SMTP设置         ${gl_kjlan}44.  ${gl_bai}vaultwarden禁止注册"
-   	  echo -e "${gl_kjlan}45.  ${gl_bai}vaultwarden注册SMTP设置             ${gl_kjlan}46.  ${gl_bai}Aria2离线下载"
+	  echo -e "${gl_kjlan}41.  ${gl_bai}耗子管理面板                        ${gl_kjlan}42.  ${gl_bai}vaultwarden(可以注册)"
+   	  echo -e "${gl_kjlan}43.  ${gl_bai}vaultwarden(禁止注册SMTP设置)       ${gl_kjlan}44.  ${gl_bai}vaultwarden(禁止注册)"
+   	  echo -e "${gl_kjlan}45.  ${gl_bai}vaultwarden(注册SMTP设置)          ${gl_kjlan}46.  ${gl_bai}Aria2离线下载"
    	  echo -e "${gl_kjlan}47.  ${gl_bai}Cloudreve网盘                      ${gl_kjlan}48.  ${gl_bai}编译部署ssh Nexterm"
 	  echo -e "${gl_kjlan}49.  ${gl_bai}LibreTV                            ${gl_kjlan}50.  ${gl_bai}MoonTV"
 	  echo -e "${gl_kjlan}------------------------"
@@ -5133,7 +5427,7 @@ linux_panel（） {
 	  echo -e "${gl_kjlan}79.  ${gl_bai}自编译ssh Nexterm ${gl_huang}★${gl_bai}                  ${gl_kjlan}80.  ${gl_bai}自编译导航Sun-Panel ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}81.  ${gl_bai}Sun-Panel压缩包安装33docker ${gl_huang}★${gl_bai}         ${gl_kjlan}82.  ${gl_bai}s3自动备份安装包（63.64.86） ${gl_huang}★${gl_bai}"
-	  echo -e "${gl_kjlan}83.  ${gl_bai}自编译caddy-dns ${gl_huang}★${gl_bai}                    ${gl_kjlan}84.  ${gl_bai}Hitokoto API （一言）  ${gl_huang}★${gl_bai}"
+	  echo -e "${gl_kjlan}83.  ${gl_bai}自编译caddy-dns ${gl_huang}★${gl_bai}                    ${gl_kjlan}84.  ${gl_bai}Hitokoto API (一言)  ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}85.  ${gl_bai}自编译openlist ${gl_huang}★${gl_bai}                     ${gl_kjlan}86.  ${gl_bai}Backrest 资源备份（63.64.82） ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}87.  ${gl_bai}Certimate 证书管理 ${gl_huang}★${gl_bai}                  ${gl_kjlan}88.  ${gl_bai}自编译minio（73.74） ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}------------------------"
@@ -5153,9 +5447,9 @@ linux_panel（） {
 	  read -e -p "请输入你的选择: " sub_choice
 
 	  case $sub_choice in
-		  1）
+		  1)
 
-			lujing="[ -d '/www/server/panel' ]"
+			lujing="[ -d "/www/server/panel" ]"
 			panelname="宝塔面板"
 
 			gongneng1="bt"
@@ -5178,9 +5472,9 @@ linux_panel（） {
 
 
 			  ;;
-		  2）
+		  2)
 
-			lujing="[ -d '/www/server/panel' ]"
+			lujing="[ -d "/www/server/panel" ]"
 			panelname="aapanel"
 
 			gongneng1="bt"
@@ -5201,14 +5495,9 @@ linux_panel（） {
 
 			  ;;
 
-         1A|1a）
+         1A|1a)
             echo -e "\033[32m正在从您的私有 GitHub 仓库拉取纯净版升级脚本...\033[0m"
             curl -sSO https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/bt/update_panel.sh && bash update_panel.sh
-            ;;
-			
-         1B|1b)
-            echo -e "\033[32m正在从您的私有 GitHub 仓库拉取纯净版升级脚本...\033[0m"
-            curl -sSO https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh && bash install.sh
             ;;
 			  
 		  3)
@@ -5296,7 +5585,7 @@ linux_panel（） {
 			3)
 				# 恢复哪吒面板
 				read -e -p "确定要恢复吗？这会覆盖现有面板！(y/n): " confirm
-				if [[ "$confirm" == "y" || "$confirm" == "Y' ]]; then
+				if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
 					cd /opt/nezha
 					rm -rf dashboard
 					tar xzvf /home/nezha/nezha_full_backup.tar.gz -C /opt/nezha
@@ -5367,8 +5656,8 @@ linux_panel（） {
 					echo "官网介绍: https://docs.linuxserver.io/images/docker-webtop/"
 					echo ""
 					echo "访问地址:"
-					echo "http://$（curl -s ipv4.ip.sb）:$docker_port"
-					echo "http://[$（curl -s ipv6.ip.sb）]:$docker_port"
+					echo "http://$(curl -s ipv4.ip.sb):$docker_port"
+					echo "http://[$(curl -s ipv6.ip.sb)]:$docker_port"
 					echo ""
 					echo "用户名: admin"
 					echo "密码: $random_passwd"
@@ -5397,7 +5686,7 @@ linux_panel（） {
 					fi
 
 					echo "正在删除本地目录 $docker_dir ..."
-					if [ -d '$docker_dir' ]; then
+					if [ -d "$docker_dir" ]; then
 						rm -rf "$docker_dir"
 						echo "目录已删除 ✅"
 					else
@@ -5410,7 +5699,7 @@ linux_panel（） {
 					echo "正在查找最新的备份文件..."
 					latest_backup=$(ls -t /home/docker/webtop_backup_*.tar.gz 2>/dev/null | head -n 1)
 
-					if [ -z "$latest_backup' ]; then
+					if [ -z "$latest_backup" ]; then
 						echo "⚠️ 未找到任何备份文件"
 					else
 						echo "找到备份文件: $latest_backup"
@@ -6111,8 +6400,8 @@ linux_panel（） {
 					echo "Webtop 容器已安装完成 ✅"
 					echo ""
 					echo "访问地址:"
-					echo "http://$（curl -s ipv4.ip.sb）:$docker_port"
-					echo "http://[$（curl -s ipv6.ip.sb）]:$docker_port"
+					echo "http://$(curl -s ipv4.ip.sb):$docker_port"
+					echo "http://[$(curl -s ipv6.ip.sb)]:$docker_port"
 					echo ""
 					echo "用户名: admin"
 					echo "密码: $random_passwd"
@@ -6141,7 +6430,7 @@ linux_panel（） {
 					fi
 
 					echo "正在删除本地目录 $docker_dir ..."
-					if [ -d '$docker_dir' ]; then
+					if [ -d "$docker_dir" ]; then
 						rm -rf "$docker_dir"
 						echo "目录已删除 ✅"
 					else
@@ -6154,7 +6443,7 @@ linux_panel（） {
 					echo "正在查找最新的备份文件..."
 					latest_backup=$(ls -t /home/docker/webtop_backup_*.tar.gz 2>/dev/null | head -n 1)
 
-					if [ -z "$latest_backup' ]; then
+					if [ -z "$latest_backup" ]; then
 						echo "⚠️ 未找到任何备份文件"
 					else
 						echo "找到备份文件: $latest_backup"
@@ -6521,9 +6810,9 @@ docker_app
 
 43)
     # 交互式输入
-    read -p "请输入 Vaultwarden 访问域名(如 https://mima.123.com): " user_domain
-    read -p "请输入 SMTP 邮件服务器(如 smtp.zoho.com): " smtp_host
-    read -p "请输入发件邮箱地址(如 admin@123.com): " smtp_user
+    read -p "请输入 Vaultwarden 访问域名（如 https://mima.123.com）: " user_domain
+    read -p "请输入 SMTP 邮件服务器（如 smtp.zoho.com）: " smtp_host
+    read -p "请输入发件邮箱地址（如 admin@123.com）: " smtp_user
     read -p "请输入发件邮箱密码: " smtp_pass
 
     docker_name="vaultwarden"
@@ -6550,7 +6839,7 @@ docker_app
         -v $install_dir/data:/data \
         vaultwarden/server"
 
-    docker_describe="Vaultwarden 禁止注册 + SMTP 邮件设置(支持自定义域名和发信配置)"
+    docker_describe="Vaultwarden 禁止注册 + SMTP 邮件设置（支持自定义域名和发信配置）"
     docker_url="官网介绍: https://github.com/dani-garcia/vaultwarden"
     docker_use="echo -e '\033[32m访问地址：$user_domain\033[0m\n邮箱发件人：$smtp_user（SMTP 启用）'"
     docker_passwd=""
@@ -6577,7 +6866,7 @@ docker_rum="docker run -d \
 				-v $install_dir/data:/data \
 				vaultwarden/server"
 
-docker_describe="一个开源的 Bitwarden 服务端实现(禁止注册，无 SMTP 设置)"
+docker_describe="一个开源的 Bitwarden 服务端实现（禁止注册，无 SMTP 设置）"
 docker_url="官网介绍: https://github.com/dani-garcia/vaultwarden"
 docker_use=""
 docker_passwd=""
@@ -6586,9 +6875,9 @@ docker_app
 
 45)
     # 交互式输入
-    read -p "请输入 Vaultwarden 访问域名(如 https://mima.123.com): " user_domain
-    read -p "请输入 SMTP 邮件服务器(如 smtp.zoho.com): " smtp_host
-    read -p "请输入发件邮箱地址(如 admin@123.com): " smtp_user
+    read -p "请输入 Vaultwarden 访问域名（如 https://mima.123.com）: " user_domain
+    read -p "请输入 SMTP 邮件服务器（如 smtp.zoho.com）: " smtp_host
+    read -p "请输入发件邮箱地址（如 admin@123.com）: " smtp_user
     read -p "请输入发件邮箱密码: " smtp_pass
 
     docker_name="vaultwarden"
@@ -6614,7 +6903,7 @@ docker_app
         -v $install_dir/data:/data \
         vaultwarden/server"
 
-    docker_describe="Vaultwarden 可以注册 + SMTP 邮件设置(支持自定义域名和发信配置)"
+    docker_describe="Vaultwarden 可以注册 + SMTP 邮件设置（支持自定义域名和发信配置）"
     docker_url="官网介绍: https://github.com/dani-garcia/vaultwarden"
     docker_use="echo -e '\033[32m访问地址：$user_domain\033[0m\n邮箱发件人：$smtp_user（SMTP 启用）'"
     docker_passwd=""
@@ -6824,12 +7113,12 @@ EOF
               echo -e "------------------------------------------------"
               echo -e "         Nexterm 维护者编译与发布工具"
               echo -e "------------------------------------------------"
-              echo -e "21） 自动检测并安装构建环境 （Node, pnpm, Docker）"
+              echo -e "21) 自动检测并安装构建环境 (Node, pnpm, Docker)"
               echo -e "22) 克隆源码并编译 Docker 镜像"
               echo -e "23) 登录 Docker Hub"
-              echo -e "24） 推送镜像到 Docker Hub （zaixiangjian/nexterm）"
+              echo -e "24) 推送镜像到 Docker Hub (zaixiangjian/nexterm)"
               echo -e "------------------------------------------------"
-              echo -e "5） 安装并运行本地容器 （测试用）"
+              echo -e "5) 安装并运行本地容器 (测试用)"
               echo -e "6) 更新已安装容器"
               echo -e "7) 卸载并删除目录"
               echo -e "8) 备份 Nexterm"
@@ -6861,11 +7150,11 @@ EOF
 
                     # 2. 检查 Node.js
                     if ! command -v node &> /dev/null; then
-                        echo "未检测到 Node.js，正在安装 （NodeSource v20）..."
+                        echo "未检测到 Node.js，正在安装 (NodeSource v20)..."
                         curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
                         apt-get install -y nodejs
                     else
-                        echo "✅ Node.js 已安装: $（node -v）"
+                        echo "✅ Node.js 已安装: $(node -v)"
                     fi
 
                     # 3. 检查 pnpm
@@ -6873,7 +7162,7 @@ EOF
                         echo "未检测到 pnpm，正在安装..."
                         npm install -g pnpm
                     else
-                        echo "✅ pnpm 已安装: $（pnpm -v）"
+                        echo "✅ pnpm 已安装: $(pnpm -v)"
                     fi
 
                     # 4. 开放防火墙端口 6989
@@ -6931,7 +7220,7 @@ EOF
                         mkdir -p $nexterm_dir
                         docker run -d --name $docker_name -e ENCRYPTION_KEY=$encryption_key --restart always -p ${docker_port}:6989 -v $nexterm_dir:/app/data $docker_img
                         echo "✅ 运行成功！"
-                        echo "本地访问地址: http://$（hostname -I | awk '{print $1}'）:${docker_port}"
+                        echo "本地访问地址: http://$(hostname -I | awk '{print $1}'):${docker_port}"
                         echo "初始化密钥: $encryption_key"
                     fi
                     sleep 3
@@ -6940,7 +7229,7 @@ EOF
                 6)
                     # 自动获取密钥更新
                     old_key=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' $docker_name 2>/dev/null | grep ENCRYPTION_KEY | cut -d'=' -f2)
-                    if [ -z "$old_key' ]; then
+                    if [ -z "$old_key" ]; then
                         echo "❌ 容器未运行，无法自动获取密钥升级"
                     else
                         echo "同步镜像并重启容器..."
@@ -6965,7 +7254,7 @@ EOF
                 8)
                     echo "正在执行备份..."
                     timestamp=$(date +%Y%m%d%H%M%S)
-                    [ ! -d "$nexterm_dir' ] && echo "❌ 数据目录不存在" && break
+                    [ ! -d "$nexterm_dir" ] && echo "❌ 数据目录不存在" && break
                     tar -czf "/home/docker/nexterm-${timestamp}.tar.gz" -C "$base_dir" data
                     echo "✅ 备份成功: /home/docker/nexterm-${timestamp}.tar.gz"
                     sleep 2
@@ -6975,7 +7264,7 @@ EOF
                     if [ ${#backups[@]} -eq 0 ]; then
                         echo "❌ 目录下未发现备份文件"
                     else
-                        for i in "${!backups[@]}"; do echo "$（（i+1））. $（basename ${backups[$i]}）"; done
+                        for i in "${!backups[@]}"; do echo "$((i+1)). $(basename ${backups[$i]})"; done
                         read -p "请选择恢复编号: " sel
                         restore_file="${backups[$((sel-1))]}"
                         read -p "请输入对应的原始加密密钥: " e_key
@@ -7109,7 +7398,7 @@ EOF
 						echo "------------------------"
 						echo "访问地址:"
 						echo "http://${local_ip}:${docker_port}"
-						[ -n "$ipv6_addr' ] && echo "http://[${ipv6_addr}]:${docker_port}"
+						[ -n "$ipv6_addr" ] && echo "http://[${ipv6_addr}]:${docker_port}"
 					else
 						encryption_key=$(openssl rand -hex 32)
 						mkdir -p $nexterm_dir
@@ -7128,7 +7417,7 @@ EOF
 						echo "通过 SSH、VNC 和 RDP 远程连接，通过 SFTP 管理文件"
 						echo "访问地址:"
 						echo "http://${local_ip}:${docker_port}"
-						[ -n "$ipv6_addr' ] && echo "http://[${ipv6_addr}]:${docker_port}"
+						[ -n "$ipv6_addr" ] && echo "http://[${ipv6_addr}]:${docker_port}"
 						echo "加密密钥为: $encryption_key"
 					fi
 					;;
@@ -7160,19 +7449,19 @@ EOF
 					fi
 
 					for i in "${!backups[@]}"; do
-						echo "$（（i+1））. $（basename ${backups[$i]}）"
+						echo "$((i+1)). $(basename ${backups[$i]})"
 					done
-					read -p "请输入备份编号(留空则恢复最新): " sel
+					read -p "请输入备份编号（留空则恢复最新）: " sel
 
-					if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -le "${#backups[@]}' ]; then
+					if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -le "${#backups[@]}" ]; then
 						restore_file="${backups[$((sel-1))]}"
 					else
 						restore_file="${backups[0]}"
 					fi
 
-					echo "恢复自: $（basename $restore_file）"
-					read -p "请输入原始加密密钥(必填，恢复后用于重新启动服务): " encryption_key
-					if [ -z "$encryption_key' ]; then
+					echo "恢复自: $(basename $restore_file)"
+					read -p "请输入原始加密密钥（必填，恢复后用于重新启动服务）: " encryption_key
+					if [ -z "$encryption_key" ]; then
 						echo "未输入密钥，操作取消。"
 						break
 					fi
@@ -7196,7 +7485,7 @@ EOF
 					echo "$docker_name 已重新启动"
 					echo "访问地址:"
 					echo "http://${local_ip}:${docker_port}"
-					[ -n "$ipv6_addr' ] && echo "http://[${ipv6_addr}]:${docker_port}"
+					[ -n "$ipv6_addr" ] && echo "http://[${ipv6_addr}]:${docker_port}"
 					echo "加密密钥为: $encryption_key"
 					;;
 				*)
@@ -7242,7 +7531,7 @@ EOF
 
 						echo
 						echo "安装完成"
-						echo "访问地址: http://$（hostname -I | awk '{print $1}'）:5032"
+						echo "访问地址: http://$(hostname -I | awk '{print $1}'):5032"
 						echo "账号: admin"
 						echo "密码: $password"
 						echo "密码只显示一次，请妥善保存！"
@@ -7265,7 +7554,7 @@ EOF
 
 						echo
 						echo "密码已重置"
-						echo "访问地址: http://$（hostname -I | awk '{print $1}'）:5032"
+						echo "访问地址: http://$(hostname -I | awk '{print $1}'):5032"
 						echo "账号: admin"
 						echo "新密码: $password"
 						echo "密码只显示一次，请妥善保存！"
@@ -7299,8 +7588,8 @@ EOF
 			echo "------------------------"
 			echo "  OpenList 系统服务管理"
 			echo "------------------------"
-			echo " 1. 安装 OpenList （Systemd 守护运行）"
-			echo " 2. 卸载 OpenList （完全清理）"
+			echo " 1. 安装 OpenList (Systemd 守护运行)"
+			echo " 2. 卸载 OpenList (完全清理)"
 			echo " 0. 返回上一级"
 			echo "------------------------"
 			read -p "请输入选择 [0-2]: " sub_opt
@@ -7310,12 +7599,12 @@ EOF
 					# --- 1. 下载与安装 ---
 					mkdir -p "$INSTALL_PATH" > /dev/null 2>&1
 					ARCH="amd64"
-					[[ "$(uname -m)" == "aarch64' ]] && ARCH="arm64"
+					[[ "$(uname -m)" == "aarch64" ]] && ARCH="arm64"
 					
-					echo "正在下载 OpenList （$ARCH）..."
+					echo "正在下载 OpenList ($ARCH)..."
 					wget -O "$INSTALL_PATH/openlist.tar.gz" "https://github.com/zaixiangjian/ziyongcdn/releases/download/4.0.8/openlist-linux-$ARCH.tar.gz" > /dev/null 2>&1
 					
-					if [ ! -s "$INSTALL_PATH/openlist.tar.gz' ]; then
+					if [ ! -s "$INSTALL_PATH/openlist.tar.gz" ]; then
 						echo "错误：下载失败！"
 						return 1
 					fi
@@ -7353,7 +7642,7 @@ EOF
 					for i in {1..15}; do
 						sleep 1
 						password=$(grep "initial password is:" "$INSTALL_PATH/openlist.log" | tail -n 1 | awk '{print $NF}')
-						[ -n "$password' ] && break
+						[ -n "$password" ] && break
 					done
 
 					ipv4=$(curl -s4 --max-time 3 ifconfig.me)
@@ -7361,9 +7650,9 @@ EOF
 					clear
 					echo "✅ OpenList 已通过 Systemd 安装成功"
 					echo "------------------------------------------------"
-					echo "服务状态：$（systemctl is-active openlist）"
-					[ -n "$ipv4' ] && echo "访问地址：http://$ipv4:5244"
-					[ -n "$password' ] && echo "初始密码：$password"
+					echo "服务状态：$(systemctl is-active openlist)"
+					[ -n "$ipv4" ] && echo "访问地址：http://$ipv4:5244"
+					[ -n "$password" ] && echo "初始密码：$password"
 					echo "------------------------------------------------"
 					echo "常用命令："
 					echo "查看状态: systemctl status openlist"
@@ -7440,8 +7729,8 @@ EOF
 
 			echo "------------------------"
 			echo "访问地址:"
-			echo "http://$（hostname -I | awk '{print $1}'）:3000"
-			echo "http://$（curl -s ifconfig.me）:${docker_port}"
+			echo "http://$(hostname -I | awk '{print $1}'):3000"
+			echo "http://$(curl -s ifconfig.me):${docker_port}"
 			echo "账号：admin 密码：umami"
 			echo "默认密码：umami123"
 			echo "------------------------"
@@ -7479,7 +7768,7 @@ EOF
 					mkdir -p /home/docker
 					cd /home/docker || exit
 
-					if [ -d '$dify_dir' ]; then
+					if [ -d "$dify_dir" ]; then
 						echo "检测到已有 Dify 目录，正在更新代码..."
 						cd "$dify_dir" || exit
 						git pull
@@ -7491,8 +7780,8 @@ EOF
 
 					cd "$docker_compose_dir" || exit
 
-					# 复制 .env 配置文件(如果不存在就复制示例)
-					if [ ! -f "$docker_compose_env' ]; then
+					# 复制 .env 配置文件（如果不存在就复制示例）
+					if [ ! -f "$docker_compose_env" ]; then
 						cp -f .env.example "$docker_compose_env"
 					fi
 
@@ -7510,14 +7799,14 @@ EOF
 						echo "------------------------"
 						echo "Dify 安装完成"
 						echo "访问地址: http://${local_ip}:8058"
-						[ -n "$ipv6_addr' ] && echo "http://[${ipv6_addr}]:8058"
+						[ -n "$ipv6_addr" ] && echo "http://[${ipv6_addr}]:8058"
 					else
 						echo "Dify 启动失败，请检查 Docker 和网络配置"
 					fi
 					;;
 
 				2)
-					if [ -d '$dify_dir' ]; then
+					if [ -d "$dify_dir" ]; then
 						timestamp=$(date +%Y%m%d%H%M%S)
 						backup_file="${backup_prefix}-${timestamp}.tar.gz"
 						tar -czf "${backup_dir}/${backup_file}" -C "$dify_dir" .
@@ -7530,7 +7819,7 @@ EOF
 				3)
 					read -p "确认卸载 Dify？将删除 /home/docker/dify 目录及所有数据，且停止所有相关容器 [y/N]: " confirm
 					if [[ "$confirm" =~ ^[Yy]$ ]]; then
-						if [ -f "$docker_compose_file' ]; then
+						if [ -f "$docker_compose_file" ]; then
 							docker compose -f "$docker_compose_file" down
 						else
 							echo "docker-compose.yaml 文件不存在，跳过停止容器"
@@ -7551,19 +7840,19 @@ EOF
 					fi
 
 					for i in "${!backups[@]}"; do
-						echo "$（（i+1））. $（basename ${backups[$i]}）"
+						echo "$((i+1)). $(basename ${backups[$i]})"
 					done
-					read -p "请输入备份编号(留空恢复最新): " sel
+					read -p "请输入备份编号（留空恢复最新）: " sel
 
-					if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -le "${#backups[@]}' ]; then
+					if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -le "${#backups[@]}" ]; then
 						restore_file="${backups[$((sel-1))]}"
 					else
 						restore_file="${backups[0]}"
 					fi
 
-					echo "恢复自: $（basename $restore_file）"
+					echo "恢复自: $(basename $restore_file)"
 
-					if [ -f "$docker_compose_file' ]; then
+					if [ -f "$docker_compose_file" ]; then
 						docker compose -f "$docker_compose_file" down
 					else
 						echo "docker-compose.yaml 文件不存在，跳过停止容器"
@@ -7581,7 +7870,7 @@ EOF
 						echo "------------------------"
 						echo "Dify 已恢复"
 						echo "访问地址: http://${local_ip}:8058"
-						[ -n "$ipv6_addr' ] && echo "http://[${ipv6_addr}]:8058"
+						[ -n "$ipv6_addr" ] && echo "http://[${ipv6_addr}]:8058"
 					else
 						echo "Dify 启动失败，请检查 Docker 和网络配置"
 					fi
@@ -7670,7 +7959,7 @@ EOF
 			unzip -o $TMP_DIR/rustdesk.zip -d $INSTALL_DIR || { echo "❌ 解压失败。"; exit 1; }
 
 			# 检查解压后的目录结构
-			if [ ! -d "$INSTALL_DIR/amd64' ]; then
+			if [ ! -d "$INSTALL_DIR/amd64" ]; then
 				echo "❌ 解压后的目录结构不正确，未找到 /root/rustdesk/amd64"
 				exit 1
 			fi
@@ -7712,8 +8001,8 @@ EOF
         while true; do
             clear
             echo "--- X-UI 安装管理界面 ---"
-            echo " 1. 安装原版 x-ui （vaxilu）"
-            echo " 2. 安装增强版 3x-ui （mhsanaei）"
+            echo " 1. 安装原版 x-ui (vaxilu)"
+            echo " 2. 安装增强版 3x-ui (mhsanaei)"
             echo " 0. 返回上一级菜单"
             echo "------------------------"
             read -p "请输入选项 [0-2]: " sub_num
@@ -7757,16 +8046,16 @@ EOF
         echo "======================================"
     }
 
-    # 创建备份任务(5/6/7通用)
+    # 创建备份任务（5/6/7通用）
     create_backup_job() {
         script_name="$1"
-        echo "======== 添加 Rclone 备份任务 （$script_name） ========"
-        read -p "请输入要备份的目录名(默认：home): " in_dir
-        if [[ -z "$in_dir' ]]; then
+        echo "======== 添加 Rclone 备份任务 ($script_name) ========"
+        read -p "请输入要备份的目录名（默认：home）: " in_dir
+        if [[ -z "$in_dir" ]]; then
             in_dir="home"
         fi
         local_dir="/${in_dir%/}/"
-        if [[ "$local_dir" == "/' ]]; then
+        if [[ "$local_dir" == "/" ]]; then
             echo "❌ 不允许备份系统根目录 /"
             return
         fi
@@ -7777,7 +8066,7 @@ EOF
         rclone listremotes
         echo
         read -p "Rclone名称输入上方已连接名称: " remote_name
-        read -p "请输入存储桶名称(S3或者R2起的名称): " bucket_name
+        read -p "请输入存储桶名称（S3或者R2起的名称）: " bucket_name
         backup_cmd="rclone copy ${local_dir} ${remote_name}:${bucket_name}/服务器备份/${dir_name}"
         echo
         echo "生成的命令："
@@ -7791,17 +8080,17 @@ EOF
         bash /root/${script_name}
         echo
         echo "======== 设置定时任务 ========"
-        read -p "每几天运行一次(0 = 每小时模式): " period
-        if [[ "$period" == "0' ]]; then
-            read -p "每几小时运行一次(例如 4): " hours
-            read -p "几分执行(0-59): " minute
+        read -p "每几天运行一次（0 = 每小时模式）: " period
+        if [[ "$period" == "0" ]]; then
+            read -p "每几小时运行一次（例如 4）: " hours
+            read -p "几分执行（0-59）: " minute
             cron_rule="$minute */$hours * * * /bin/bash /root/${script_name}"
         else
-            read -p "几点执行(0-23): " hour
-            read -p "几分执行(0-59): " minute
+            read -p "几点执行（0-23）: " hour
+            read -p "几分执行（0-59）: " minute
             cron_rule="$minute $hour */$period * * /bin/bash /root/${script_name}"
         fi
-        （crontab -l 2>/dev/null | grep -v "/root/${script_name}"; echo "$cron_rule"） | crontab -
+        (crontab -l 2>/dev/null | grep -v "/root/${script_name}"; echo "$cron_rule") | crontab -
         echo
         echo "定时任务已添加："
         echo "$cron_rule"
@@ -7814,7 +8103,7 @@ EOF
         crontab -l | grep "s3beifen"
         echo "===================================="
         read -p "是否删除所有 s3beifen 相关任务？(y/n): " confirm
-        if [[ "$confirm" == "y' ]]; then
+        if [[ "$confirm" == "y" ]]; then
             crontab -l | grep -v "s3beifen" | crontab -
             echo "定时任务已删除。"
         else
@@ -7841,9 +8130,9 @@ endpoint =存储桶访问地址"
 
         echo "3. 修改配置文件"
         echo "4. 查看已添加的 Rclone 远程"
-        echo "5. 添加目录备份任务 （生成 s3beifen.sh）"
-        echo "6. 添加目录备份任务 （生成 s3beifen1.sh）"
-        echo "7. 添加目录备份任务 （生成 s3beifen2.sh）"
+        echo "5. 添加目录备份任务 (生成 s3beifen.sh)"
+        echo "6. 添加目录备份任务 (生成 s3beifen1.sh)"
+        echo "7. 添加目录备份任务 (生成 s3beifen2.sh)"
         echo "8. 删除定时任务"
         echo "9. 卸载 Rclone"
         echo "0. 返回上一级菜单"
@@ -7951,14 +8240,14 @@ endpoint =存储桶访问地址"
 
         67)
             # 交互式输入
-            read -p "请输入 ownCloud 访问 IP(回车自动获取公网IP): " user_ip
-            if [ -z "$user_ip' ]; then
+            read -p "请输入 ownCloud 访问 IP（回车自动获取公网IP）: " user_ip
+            if [ -z "$user_ip" ]; then
                 user_ip=$(curl -s https://api.ipify.org)
                 echo "自动获取公网IP: $user_ip"
             fi
 
-            read -p "请输入访问域名(回车使用默认 www.wangpan.dev): " user_domain
-            if [ -z "$user_domain' ]; then
+            read -p "请输入访问域名（回车使用默认 www.wangpan.dev）: " user_domain
+            if [ -z "$user_domain" ]; then
                 user_domain="www.wangpan.dev"
                 echo "使用默认域名: $user_domain"
             fi
@@ -8069,7 +8358,7 @@ endpoint =存储桶访问地址"
     docker_img="minio/minio:latest"
     docker_port=9000
     docker_console_port=9001
-    # 自动生成 20 位随机强密码(只包含大小写字母和数字)
+    # 自动生成 20 位随机强密码（只包含大小写字母和数字）
     MINIO_ROOT_USER=$(tr -dc 'A-Z0-9' </dev/urandom | head -c 20)
     MINIO_ROOT_PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40)
     
@@ -8106,7 +8395,7 @@ endpoint =存储桶访问地址"
     docker_name="openlist"
     docker_img="openlistteam/openlist:v4.1.9"
     docker_port=5244
-    docker_describe="OpenList：Alist 分支的开源网盘聚合程序(支持多存储)"
+    docker_describe="OpenList：Alist 分支的开源网盘聚合程序（支持多存储）"
     docker_url="官网介绍: https://github.com/OpenListTeam/OpenList
 
 查看密码使用
@@ -8148,7 +8437,7 @@ docker logs openlist
 # 随机生成 ADMIN_TOKEN
 ADMIN_TOKEN=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c20)
 
-# 自动获取本机 IP(取第一个非 127.0.0.1 的 IP)
+# 自动获取本机 IP（取第一个非 127.0.0.1 的 IP）
 HOST_IP=$(hostname -I | awk '{print $1}')
 
 docker_name="vaultwarden"
@@ -8168,7 +8457,7 @@ docker_rum="docker run -d \
                 -v $install_dir/data:/data \
                 vaultwarden/server"
 
-docker_describe="更改false改为true可注册，一个开源的 Bitwarden 服务端实现(禁止注册，自动生成管理员 Token，无 SMTP 设置)"
+docker_describe="更改false改为true可注册，一个开源的 Bitwarden 服务端实现（禁止注册，自动生成管理员 Token，无 SMTP 设置）"
 docker_url="官网介绍: https://github.com/dani-garcia/vaultwarden"
 docker_use="echo \"✅ Vaultwarden 管理员 Token: $ADMIN_TOKEN\" && echo \"🌐 Web 访问: http://$HOST_IP:3280\""
 docker_passwd=""
@@ -8203,17 +8492,17 @@ docker_app
 
 79)
             clear
-            echo "Nexterm - 基于 Web 的终端访问工具 （zaixiangjian 编译版）"
+            echo "Nexterm - 基于 Web 的终端访问工具 (zaixiangjian 编译版)"
             echo "官方 GitHub: https://github.com/gnmyt/Nexterm"
             echo "功能介绍: 使用浏览器远程访问主机终端，支持 SSH、VNC、RDP 及 SFTP"
             echo "------------------------------------------------"
             echo "1. 安装 Nexterm"
             echo "2. 备份 Nexterm"
             echo "------------------------------------------------"
-            echo "3. 卸载 Nexterm （彻底删除本地数据）"
+            echo "3. 卸载 Nexterm (彻底删除本地数据)"
             echo "------------------------------------------------"
             echo "4. 恢复 Nexterm"
-            echo "99. 更新 Nexterm 镜像 （自动继承配置）"
+            echo "99. 更新 Nexterm 镜像 (自动继承配置)"
             echo "0. 返回主菜单"
             echo "------------------------------------------------"
             read -p "请输入操作编号: " sub_choice
@@ -8246,14 +8535,14 @@ docker_app
                             $docker_img
                         echo "------------------------------------------------"
                         echo "✅ $docker_name 安装成功"
-                        echo "加密密钥为: $encryption_key （请务必保存）"
+                        echo "加密密钥为: $encryption_key (请务必保存)"
                     fi
                     ;;
                 2)
                     echo "正在备份..."
                     timestamp=$(date +%Y%m%d%H%M%S)
                     backup_file="${backup_prefix}-${timestamp}.tar.gz"
-                    [ ! -d "$nexterm_dir' ] && echo "错误: 目录不存在" && break
+                    [ ! -d "$nexterm_dir" ] && echo "错误: 目录不存在" && break
                     tar -czf "${backup_dir}/${backup_file}" -C "$base_dir" data
                     echo "✅ 备份成功！保存为: ${backup_dir}/${backup_file}"
                     ls -t ${backup_dir}/${backup_prefix}-*.tar.gz | sed -n '4,$p' | xargs -r rm -f
@@ -8274,12 +8563,12 @@ docker_app
                     echo "可用备份清单："
                     backups=($(ls -1t $backup_dir/${backup_prefix}-*.tar.gz 2>/dev/null))
                     [ ${#backups[@]} -eq 0 ] && echo "❌ 无备份" && break
-                    for i in "${!backups[@]}"; do echo "$（（i+1））. $（basename ${backups[$i]}）"; done
+                    for i in "${!backups[@]}"; do echo "$((i+1)). $(basename ${backups[$i]})"; done
                     read -p "选择编号: " sel
                     restore_file="${backups[$((sel-1))]:-${backups[0]}}"
                     
                     read -p "请输入原始加密密钥: " encryption_key
-                    [ -z "$encryption_key' ] && echo "密钥不能为空" && break
+                    [ -z "$encryption_key" ] && echo "密钥不能为空" && break
 
                     docker rm -f $docker_name 2>/dev/null
                     rm -rf "$base_dir"
@@ -8292,7 +8581,7 @@ docker_app
                 99)
                     echo "检查更新中..."
                     old_key=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' $docker_name 2>/dev/null | grep ENCRYPTION_KEY | cut -d'=' -f2)
-                    if [ -z "$old_key' ]; then
+                    if [ -z "$old_key" ]; then
                         echo "❌ 容器未运行，无法自动获取密钥。"
                     else
                         docker pull $docker_img
@@ -8315,11 +8604,11 @@ while true; do
   echo -e "------------------------------------------------"
   echo -e "         Sun-Panel 镜像维护工具"
   echo -e "------------------------------------------------"
-  echo -e "21） 安装依赖环境 （Node.js, pnpm, Docker）"
+  echo -e "21) 安装依赖环境 (Node.js, pnpm, Docker)"
   echo -e "22) 克隆源码并编译 Docker 镜像"
   echo -e "23) 登录 Docker Hub"
-  echo -e "24） 推送镜像到 Docker Hub （zaixiangjian/sun-panel:latest）"
-  echo -e "5） 安装并运行 sun-panel 容器 （/home/docker/sun-panel）"
+  echo -e "24) 推送镜像到 Docker Hub (zaixiangjian/sun-panel:latest)"
+  echo -e "5) 安装并运行 sun-panel 容器 (/home/docker/sun-panel)"
   echo -e "6) 更新已安装容器"
   echo -e "7) 卸载 sun-panel 并删除 /home/docker/sun-panel"
   echo -e "8) 备份 sun-panel 数据到 /home/docker"
@@ -8340,7 +8629,7 @@ while true; do
         echo "安装 Docker..."
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$（dpkg --print-architecture） signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $（lsb_release -cs） stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
         apt update
         apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
       else
@@ -8441,7 +8730,7 @@ while true; do
 
   # 获取本机 IP
   HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-  [ -z "$HOST_IP' ] && HOST_IP=$(hostname -I | awk '{print $1}')
+  [ -z "$HOST_IP" ] && HOST_IP=$(hostname -I | awk '{print $1}')
 
   echo -e "\n✅ 安装完成！"
   echo -e "👉 访问地址: http://${HOST_IP}:${HOST_PORT}"
@@ -8476,7 +8765,7 @@ while true; do
 
   # 获取本机 IP
   HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-  [ -z "$HOST_IP' ] && HOST_IP=$(hostname -I | awk '{print $1}')
+  [ -z "$HOST_IP" ] && HOST_IP=$(hostname -I | awk '{print $1}')
 
   echo -e "\n✅ 更新完成！访问地址: http://${HOST_IP}:${DEFAULT_PORT}"
   read -n1 -r -p "回车继续..." key
@@ -8499,7 +8788,7 @@ while true; do
   BACKUP_NAME="sun-panel-backup-$(date +%Y%m%d_%H%M%S).tar.gz"
   CONTAINER_DATA="/home/docker/sun-panel"
 
-  if [ ! -d "$CONTAINER_DATA' ]; then
+  if [ ! -d "$CONTAINER_DATA" ]; then
     echo -e "❌ 数据目录不存在：$CONTAINER_DATA"
     read -n1 -r -p "回车继续..." key
     break
@@ -8527,7 +8816,7 @@ while true; do
   # 获取最新备份文件
   LATEST_BACKUP=$(ls -t $BACKUP_DIR/sun-panel-backup-*.tar.gz 2>/dev/null | head -n1)
 
-  if [ -z "$LATEST_BACKUP' ]; then
+  if [ -z "$LATEST_BACKUP" ]; then
     echo -e "❌ 没有找到任何备份文件"
     read -n1 -r -p "回车继续..." key
     break
@@ -8535,12 +8824,12 @@ while true; do
 
   echo -e "\n📂 可用备份文件："
   ls -lh $BACKUP_DIR/sun-panel-backup-*.tar.gz 2>/dev/null
-  echo -e "最新备份: $（basename "$LATEST_BACKUP"）"
+  echo -e "最新备份: $(basename "$LATEST_BACKUP")"
 
   read -e -p "请输入要恢复的备份文件名 [回车使用最新]: " BACKUP_FILE
   BACKUP_FILE=${BACKUP_FILE:-$(basename "$LATEST_BACKUP")}
 
-  if [ ! -f "$BACKUP_DIR/$BACKUP_FILE' ]; then
+  if [ ! -f "$BACKUP_DIR/$BACKUP_FILE" ]; then
     echo -e "❌ 备份文件不存在"
     read -n1 -r -p "回车继续..." key
     break
@@ -8578,7 +8867,7 @@ while true; do
 
   # 获取本机 IP
   HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-  [ -z "$HOST_IP' ] && HOST_IP=$(hostname -I | awk '{print $1}')
+  [ -z "$HOST_IP" ] && HOST_IP=$(hostname -I | awk '{print $1}')
 
   echo -e "\n✅ 恢复完成并已启动"
   echo -e "👉 访问地址: http://${HOST_IP}:${HOST_PORT}"
@@ -8601,7 +8890,7 @@ done
 81)
         # 内部函数：更新 Hosts 回流
         update_sun_panel_hosts() {
-            echo "🌐 正在配置本地回环地址 （Hosts）..."
+            echo "🌐 正在配置本地回环地址 (Hosts)..."
             local domains=("api.sun-panel.top" "www.sun-panel.top" "pro.sun-panel.top" "sun-panel.top")
             for dom in "${domains[@]}"; do
                 if ! grep -qE "127.0.0.1[[:space:]]+$dom" /etc/hosts; then
@@ -8616,12 +8905,12 @@ done
         while true; do
             clear
             echo "------------------------------------------------"
-            echo "          Sun-Panel 管理工具 （v1.8.1）"
+            echo "          Sun-Panel 管理工具 (v1.8.1)"
             echo "------------------------------------------------"
             echo "1. 安装 Sun-Panel"
-            echo "2. 卸载 Sun-Panel （含启动任务与目录）"
-            echo "3. 备份 Sun-Panel （.tar.gz）"
-            echo "4. 恢复 Sun-Panel （智能检索/默认最新）"
+            echo "2. 卸载 Sun-Panel (含启动任务与目录)"
+            echo "3. 备份 Sun-Panel (.tar.gz)"
+            echo "4. 恢复 Sun-Panel (智能检索/默认最新)"
             echo "0. 返回上一级"
             echo "------------------------------------------------"
             read -e -p "请输入你的选择: " sub_choice
@@ -8647,7 +8936,7 @@ done
                     
                     echo "📦 正在解压并整理环境..."
                     tar -xzf sun-panel.tar.gz
-                    if [ -d 'sun-panel_v1.8.1_linux_amd64' ]; then
+                    if [ -d "sun-panel_v1.8.1_linux_amd64" ]; then
                         cp -rn sun-panel_v1.8.1_linux_amd64/* ./
                         rm -rf sun-panel_v1.8.1_linux_amd64
                     fi
@@ -8679,7 +8968,7 @@ EOF
                     systemctl enable sun-panel
                     systemctl start sun-panel
                     
-                    echo "⏳ 正在验证端口 （3002）..."
+                    echo "⏳ 正在验证端口 (3002)..."
                     sleep 5
                     if ss -tuln | grep -q ":3002 "; then
                         echo "✅ 安装完成！服务已在端口 3002 成功运行。"
@@ -8736,7 +9025,7 @@ EOF
 
                     echo "💡 请选择备份（回车默认最新备份）:"
                     for i in "${!backups[@]}"; do
-                        echo "  $（（i+1））. $（basename "${backups[$i]}"）"
+                        echo "  $((i+1)). $(basename "${backups[$i]}")"
                     done
 
                     read -p "选择序号: " b_idx
@@ -8810,9 +9099,9 @@ EOF
         # --- 内部函数：创建 Rclone 备份脚本 ---
         create_backup_job() {
             script_name="$1"
-            echo "======== 添加 Rclone 备份任务 （$script_name） ========"
-            read -p "请输入要备份的本地目录全路径(例如 /home/docker): " local_dir
-            if [ ! -d "$local_dir' ]; then echo "❌ 目录不存在！"; return; fi
+            echo "======== 添加 Rclone 备份任务 ($script_name) ========"
+            read -p "请输入要备份的本地目录全路径（例如 /home/docker）: " local_dir
+            if [ ! -d "$local_dir" ]; then echo "❌ 目录不存在！"; return; fi
             
             in_dir=$(basename "$local_dir")
             echo "当前 Rclone 远程列表："
@@ -8831,7 +9120,7 @@ EOF
             
             echo "📅 设置定时执行："
             read -p "每几天运行一次 (输入数字，0表示每小时模式): " period
-            if [[ "$period" == "0' ]]; then
+            if [[ "$period" == "0" ]]; then
                 read -p "每几小时运行一次 (1-23): " hours
                 cron_rule="0 */$hours * * * /bin/bash /root/${script_name}"
             else
@@ -8839,7 +9128,7 @@ EOF
                 cron_rule="0 $hour */$period * * /bin/bash /root/${script_name}"
             fi
 
-            （crontab -l 2>/dev/null | grep -v "/root/${script_name}"; echo "$cron_rule"） | crontab -
+            (crontab -l 2>/dev/null | grep -v "/root/${script_name}"; echo "$cron_rule") | crontab -
             echo "✅ 定时任务已更新。"
         }
 
@@ -8847,11 +9136,11 @@ EOF
             clear
             show_cron_jobs
             echo "------------------------------------------------"
-            echo "      Backrest & Rclone 综合管理 （备份专题）"
+            echo "      Backrest & Rclone 综合管理 (备份专题)"
             echo "------------------------------------------------"
-            echo " [ Backrest 网页备份 （端口 9898） ]"
-            echo " 1. 安装 Backrest （1.10.1）"
-            echo " 2. 卸载 Backrest （完全清理）"
+            echo " [ Backrest 网页备份 (端口 9898) ]"
+            echo " 1. 安装 Backrest (1.10.1)"
+            echo " 2. 卸载 Backrest (完全清理)"
             echo " 3. 重启 Backrest 服务"
             echo " 4. 查看服务状态/日志"
             echo "============================================================"
@@ -8860,10 +9149,10 @@ EOF
             echo "rclone:r2:cunchu/全部备份"
             echo "============================================================"
             echo " [ Rclone 命令行/S3 备份 ]"
-            echo " 20. 安装 Rclone （v1.72.1）"
+            echo " 20. 安装 Rclone (v1.72.1)"
             echo " 21. 获取配置文件路径"
-            echo " 22. 交互式添加 Rclone 远程配置 （S3）"
-            echo " 23. 修改配置文件 （nano）"
+            echo " 22. 交互式添加 Rclone 远程配置 (S3)"
+            echo " 23. 修改配置文件 (nano)"
             echo " 24. 查看已添加的 Rclone 远程"
             echo " 25. 目录备份 -> s3beifen.sh"
             echo " 26. 目录备份 -> s3beifen1.sh"
@@ -8872,10 +9161,10 @@ EOF
             echo " 29. 卸载 Rclone"
             echo "------------------------------------------------"
             echo " [ 系统全量备份与恢复 ]"
-            echo " 88. 备份全部内容 （Backrest + Rclone）"
-            echo " 99. 自动恢复并启用 （从 /home/backrclone）"
+            echo " 88. 备份全部内容 (Backrest + Rclone)"
+            echo " 99. 自动恢复并启用 (从 /home/backrclone)"
             echo "------------------------------------------------"
-            echo " 100. 完全卸载 （清理目录/服务/残留/环境）"
+            echo " 100. 完全卸载 (清理目录/服务/残留/环境)"
             echo "------------------------------------------------"
             echo " 0. 返回上一级菜单"
             echo "------------------------------------------------"
@@ -8917,7 +9206,7 @@ EOF
                     systemctl start backrest
                     sleep 2
                     if systemctl is-active --quiet backrest; then
-                        echo "✅ 安装成功！访问地址: http://$（curl -s ipv4.icanhazip.com）:9898"
+                        echo "✅ 安装成功！访问地址: http://$(curl -s ipv4.icanhazip.com):9898"
                     else
                         echo "❌ 启动失败，请检查端口 9898 是否被占用。"
                         journalctl -u backrest --no-pager -n 10
@@ -8993,7 +9282,7 @@ EOF
 
 
 88)
-                    echo "🗄️ 正在执行【深度全量】备份 （程序 + 数据库 + 账户配置）..."
+                    echo "🗄️ 正在执行【深度全量】备份 (程序 + 数据库 + 账户配置)..."
                     mkdir -p "$BACKUP_SAVE_DIR"
                     BACKUP_FILE="$BACKUP_SAVE_DIR/backrclone-$(date +%Y%m%d%H%M%S).tar.gz"
                     
@@ -9014,7 +9303,7 @@ EOF
                         "$RC_CONF" \
                         $(ls /root/s3beifen*.sh 2>/dev/null) 2>/dev/null
                     
-                    if [ -f "$BACKUP_FILE' ]; then
+                    if [ -f "$BACKUP_FILE" ]; then
                         echo "✅ 全量备份完成：$BACKUP_FILE"
                         echo "💡 已包含账户、密码、面板设置及所有任务。"
                     else
@@ -9025,7 +9314,7 @@ EOF
 99)
     echo "♻️ 正在执行全环境自动恢复..."
     LATEST_PKG=$(ls -t $BACKUP_SAVE_DIR/backrclone-*.tar.gz 2>/dev/null | head -n 1)
-    if [ -z "$LATEST_PKG' ]; then
+    if [ -z "$LATEST_PKG" ]; then
         echo "❌ /home/backrclone 下未发现备份文件"; read -p "回车继续..."; continue
     fi
     
@@ -9038,9 +9327,9 @@ EOF
 
     echo "⚙️ 权限校准与服务重建..."
     chmod +x "$BR_DIR/backrest" 2>/dev/null
-    [ -f "/root/.local/share/backrest/restic' ] && chmod +x "/root/.local/share/backrest/restic"
+    [ -f "/root/.local/share/backrest/restic" ] && chmod +x "/root/.local/share/backrest/restic"
     # 如果备份里有 rclone，还原它
-    [ -f "$RC_DIR/rclone' ] && cp -f "$RC_DIR/rclone" /usr/bin/rclone && chmod +x /usr/bin/rclone
+    [ -f "$RC_DIR/rclone" ] && cp -f "$RC_DIR/rclone" /usr/bin/rclone && chmod +x /usr/bin/rclone
     chmod +x /root/s3beifen*.sh 2>/dev/null
 
     cat > "$BR_SERVICE" <<EOF
@@ -9062,14 +9351,14 @@ EOF
     systemctl enable backrest >/dev/null 2>&1
     systemctl start backrest
     
-    echo "⏳ 等待服务初始化 （5s）..."
+    echo "⏳ 等待服务初始化 (5s)..."
     sleep 5
     
     # 使用稳健的判断逻辑
     BR_STATUS=$(systemctl is-active backrest)
-    if [ "$BR_STATUS" = "active' ]; then
+    if [ "$BR_STATUS" = "active" ]; then
         echo "✅ Backrest 核心服务恢复成功！"
-        echo "🌍 访问地址: http://$（curl -s ipv4.icanhazip.com）:9898"
+        echo "🌍 访问地址: http://$(curl -s ipv4.icanhazip.com):9898"
         
         echo "------------------------------------------------"
         echo "📦 正在自动为您安装 Rclone 环境..."
@@ -9086,14 +9375,14 @@ EOF
         echo "💡 恢复流程已完成。"
         echo "👉 请接下来手动输入 [ 21 ] 获取配置文件路径，确认 Rclone 配置是否生效。"
     else
-        echo "❌ 服务启动状态异常 （$BR_STATUS），请检查选项 4 日志。"
+        echo "❌ 服务启动状态异常 ($BR_STATUS)，请检查选项 4 日志。"
     fi
     read -p "回车继续..." ;;
 
 100)
                     echo "⚠️  正在准备完全卸载 Backrest & Rclone 环境..."
                     read -p "此操作将删除所有配置、备份任务及程序文件，确定吗？(y/n): " confirm
-                    if [[ "$confirm" != "y' ]]; then echo "已取消。"; read -p "回车继续..."; continue; fi
+                    if [[ "$confirm" != "y" ]]; then echo "已取消。"; read -p "回车继续..."; continue; fi
 
                     echo "🛑 正在停止并禁用 Backrest 服务..."
                     systemctl stop backrest 2>/dev/null
@@ -9105,15 +9394,15 @@ EOF
                     # $BASE_DIR 即 /home/docker/BackyuRclone
                     rm -rf "$BASE_DIR"
 
-                    echo "🗑️  正在清理 Backrest 系统残留 （配置与运行数据）..."
+                    echo "🗑️  正在清理 Backrest 系统残留 (配置与运行数据)..."
                     rm -rf "/root/.config/backrest"
                     rm -rf "/root/.local/share/backrest"
 
-                    echo "🗑️  正在清理 Rclone 系统残留 （程序与配置）..."
+                    echo "🗑️  正在清理 Rclone 系统残留 (程序与配置)..."
                     rm -f /usr/bin/rclone
                     rm -rf "/root/.config/rclone"
 
-                    echo "🗑️  正在清理定时任务 （Cron Jobs）..."
+                    echo "🗑️  正在清理定时任务 (Cron Jobs)..."
                     crontab -l 2>/dev/null | grep -v "s3beifen" | crontab -
 
                     echo "------------------------------------------------"
@@ -9140,21 +9429,21 @@ EOF
         echo -e "     Caddy & Cloudflare 自动化编译与安装工具"
         echo -e "------------------------------------------------"
         echo -e "【开发编译与推送】"
-        echo -e "1）  一键安装环境并编译 Caddy （含 Cloudflare 插件）"
+        echo -e "1)  一键安装环境并编译 Caddy (含 Cloudflare 插件)"
         echo -e "2)  登录 Docker Hub"
         echo -e "3)  推送镜像到 Docker Hub"
         echo -e "------------------------------------------------"
-        echo -e "【Docker-Compose 管理 （推荐）】"
-        echo -e "11） 安装/启动 Caddy （可自定义目录与 Token）"
-        echo -e "12） 更新 Caddy 镜像 （latest）"
-        echo -e "13） 查看 DNS 模块 （验证插件）"
-        echo -e "14） 重载 Caddy 配置 （热更新）"
-        echo -e "15） 卸载 Caddy （Compose 模式）"
+        echo -e "【Docker-Compose 管理 (推荐)】"
+        echo -e "11) 安装/启动 Caddy (可自定义目录与 Token)"
+        echo -e "12) 更新 Caddy 镜像 (latest)"
+        echo -e "13) 查看 DNS 模块 (验证插件)"
+        echo -e "14) 重载 Caddy 配置 (热更新)"
+        echo -e "15) 卸载 Caddy (Compose 模式)"
         echo -e "------------------------------------------------"
-        echo -e "【Docker Run 手动管理 （自定义路径）】"
-        echo -e "21） 手动路径安装 （可自定义挂载目录）"
-        echo -e "22） 更新 Caddy 镜像 （latest）"
-        echo -e "23） 卸载 Caddy （Run 模式）"
+        echo -e "【Docker Run 手动管理 (自定义路径)】"
+        echo -e "21) 手动路径安装 (可自定义挂载目录)"
+        echo -e "22) 更新 Caddy 镜像 (latest)"
+        echo -e "23) 卸载 Caddy (Run 模式)"
         echo -e "------------------------------------------------"
         echo -e "0)  返回主菜单"
         echo -e "------------------------------------------------"
@@ -9202,12 +9491,12 @@ EOF
                 mkdir -p "$caddy_path/data" "$caddy_path/config"
                 cd "$caddy_path" || exit
 
-                if [ ! -f "Caddyfile' ]; then
+                if [ ! -f "Caddyfile" ]; then
                     echo "创建默认 Caddyfile..."
                     echo -e ":80 {\n    respond \"Hello Caddy\"\n}" > Caddyfile
                 fi
 
-                if [ ! -f "docker-compose.yml' ]; then
+                if [ ! -f "docker-compose.yml" ]; then
                     read -p "请输入 Cloudflare Token (CF_API_TOKEN): " cf_token
                     cat <<EOF > docker-compose.yml
 services:
@@ -9260,7 +9549,7 @@ EOF
                 echo "正在通过 Compose 停止并卸载..."
                 read -p "请输入安装根目录 (默认 /home/docker/caddy/): " del_path
                 del_path=${del_path:-/home/docker/caddy/}
-                if [ -d '$del_path' ]; then
+                if [ -d "$del_path" ]; then
                     cd "$del_path" && docker compose down
                     echo "✅ 容器已停止并移除"
                 else
@@ -9273,7 +9562,7 @@ EOF
                 read -p "请输入安装根目录 (默认 /home/docker/caddy/): " run_path
                 run_path=${run_path:-/home/docker/caddy/}
                 mkdir -p "$run_path/data" "$run_path/config"
-                [ ! -f "$run_path/Caddyfile' ] && echo ":80 { respond \"Hello\" }" > "$run_path/Caddyfile"
+                [ ! -f "$run_path/Caddyfile" ] && echo ":80 { respond \"Hello\" }" > "$run_path/Caddyfile"
                 
                 read -p "请输入 Cloudflare API Token: " cf_token
                 docker run -d \
@@ -9285,7 +9574,7 @@ EOF
                   -e CF_API_TOKEN="$cf_token" \
                   --restart always \
                   "$docker_img"
-                echo "✅ Run 模式安装完成 （路径: $run_path）"
+                echo "✅ Run 模式安装完成 (路径: $run_path)"
                 read -n1 -r -p "回车继续..." key
                 ;;
 
@@ -9309,7 +9598,7 @@ EOF
         while true; do
             clear
             echo -e "------------------------------------------------"
-            echo -e "      Hitokoto API （一言） 自动化管理工具"
+            echo -e "      Hitokoto API (一言) 自动化管理工具"
             echo -e "------------------------------------------------"
             echo -e "【源码编译与推送】"
             echo -e "1)  一键安装环境并编译 Hitokoto API 镜像"
@@ -9317,9 +9606,9 @@ EOF
             echo -e "3)  推送镜像到 Docker Hub"
             echo -e "------------------------------------------------"
             echo -e "【部署与管理】"
-            echo -e "11） 快速部署 （Docker Compose 模式）"
+            echo -e "11) 快速部署 (Docker Compose 模式)"
             echo -e "12) 查看 API 运行日志"
-            echo -e "13） 检查 API 健康状态 （Curl 测试）"
+            echo -e "13) 检查 API 健康状态 (Curl 测试)"
             echo -e "14) 停止并卸载 API 容器"
             echo -e "------------------------------------------------"
             echo -e "0)  返回主菜单"
@@ -9452,7 +9741,7 @@ EOF
 
 
                 12)
-                    echo "--- 正在查看容器日志 （Ctrl+C 退出） ---"
+                    echo "--- 正在查看容器日志 (Ctrl+C 退出) ---"
                     docker logs -f hitokoto-api
                     ;;
 
@@ -9467,7 +9756,7 @@ EOF
                     echo "正在停止并移除容器..."
                     read -p "请输入部署目录 (默认 /home/docker/hitokoto): " del_path
                     del_path=${del_path:-/home/docker/hitokoto}
-                    if [ -d '$del_path' ]; then
+                    if [ -d "$del_path" ]; then
                         cd "$del_path" && docker compose down
                         echo "✅ 容器已移除"
                     else
@@ -9486,17 +9775,17 @@ EOF
     while true; do
         clear
         echo -e "------------------------------------------------"
-        echo -e "      OpenList 最新版 （AList Fork） 编译工具"
+        echo -e "      OpenList 最新版 (AList Fork) 编译工具"
         echo -e "------------------------------------------------"
         echo -e "【源码与镜像管理】"
-        echo -e "1）  安装环境并修复 Docker （解决 Dpkg/Sock 错误）"
-        echo -e "2）  一键克隆源码并开始 Docker 编译 （本地构建）"
+        echo -e "1)  安装环境并修复 Docker (解决 Dpkg/Sock 错误)"
+        echo -e "2)  一键克隆源码并开始 Docker 编译 (本地构建)"
         echo -e "3)  登录 Docker Hub"
         echo -e "4)  推送镜像到 Docker Hub"
         echo -e "------------------------------------------------"
         echo -e "【容器部署管理】"
-        echo -e "11） 部署/启动 容器 （使用本地最新镜像）"
-        echo -e "12） 查看运行日志 （获取初始密码）"
+        echo -e "11) 部署/启动 容器 (使用本地最新镜像)"
+        echo -e "12) 查看运行日志 (获取初始密码)"
         echo -e "13) 停止并彻底卸载 OpenList"
         echo -e "------------------------------------------------"
         echo -e "0)  返回主菜单"
@@ -9532,7 +9821,7 @@ EOF
             2)
                 echo -e "\n--- 正在同步 OpenList 最新源码 ---"
                 mkdir -p "$build_dir" && cd "$build_dir"
-                [ -d 'OpenList' ] && rm -rf OpenList
+                [ -d "OpenList" ] && rm -rf OpenList
                 
                 git clone --depth 1 "$my_github_url"
                 cd OpenList
@@ -9567,7 +9856,7 @@ EOF
                 ;;
 
             11)
-                [ "$ol_choice" == "12' ] && echo -e "\n--- 正在尝试拉取远程镜像 ---" && sudo docker pull "$my_docker_img"
+                [ "$ol_choice" == "12" ] && echo -e "\n--- 正在尝试拉取远程镜像 ---" && sudo docker pull "$my_docker_img"
                 
                 echo -e "\n--- 正在清理旧容器并优化启动环境 ---"
                 sudo docker rm -f openlist &>/dev/null
@@ -9576,7 +9865,7 @@ EOF
                 mkdir -p "$build_dir/data"
                 sudo chmod -R 777 "$build_dir/data"
                 
-                echo "正在启动 OpenList 容器 （端口 5244）..."
+                echo "正在启动 OpenList 容器 (端口 5244)..."
                 sudo docker run -d \
                     --name openlist \
                     -p 5244:5244 \
@@ -9587,11 +9876,11 @@ EOF
                 if [ $? -eq 0 ]; then
                     echo -e "\n✅ 启动成功！"
                     echo "------------------------------------------------"
-                    echo "🔗 访问地址 （根据网络环境选择）:"
+                    echo "🔗 访问地址 (根据网络环境选择):"
                     
                     # 获取公网 IPv4
                     pub_v4=$(curl -s4 --connect-timeout 2 ifconfig.me)
-                    [ -n "$pub_v4' ] && echo -e "   - 公网访问: \033[36mhttp://$pub_v4:5244\033[0m"
+                    [ -n "$pub_v4" ] && echo -e "   - 公网访问: \033[36mhttp://$pub_v4:5244\033[0m"
                     
                     # 获取内网 IPv4
                     loc_v4=$(hostname -I | awk '{print $1}')
@@ -9599,7 +9888,7 @@ EOF
                     
                     # 获取全局 IPv6 (过滤 fe80)
                     loc_v6=$(ip -6 addr show | grep -E 'inet6 [23]' | awk '{print $2}' | cut -d'/' -f1 | head -n 1)
-                    if [ -n "$loc_v6' ]; then
+                    if [ -n "$loc_v6" ]; then
                         echo -e "   - IPv6 访问: \033[36mhttp:[$loc_v6]:5244\033[0m"
                     fi
                     
@@ -9612,11 +9901,11 @@ EOF
                     password=$(sudo docker logs openlist 2>&1 | grep -E "password is:|Successfully generated password:" | awk -F': ' '{print $2}' | xargs)
                     
                     # 途径2: 如果日志没有，直接执行内部命令查询
-                    if [ -z "$password' ]; then
+                    if [ -z "$password" ]; then
                         password=$(sudo docker exec openlist ./alist admin 2>&1 | grep "admin password:" | awk -F': ' '{print $2}' | xargs)
                     fi
 
-                    if [ -n "$password' ]; then
+                    if [ -n "$password" ]; then
                         echo -e "👤 默认账号: admin"
                         echo -e "🔑 初始密码: \033[32m$password\033[0m"
                     else
@@ -9631,7 +9920,7 @@ EOF
                 ;;
 
             12)
-                echo -e "--- 容器运行日志 （Ctrl+C 退出） ---"
+                echo -e "--- 容器运行日志 (Ctrl+C 退出) ---"
                 sudo docker logs -f --tail 100 openlist
                 ;;
 
@@ -9657,12 +9946,12 @@ while true; do
     echo "------------------------------------------------"
     echo "【源码与镜像管理】"
     echo "1) 安装环境并修复 Docker"
-    echo "2） 一键克隆源码并完整编译 （前端+后端+Docker）"
+    echo "2) 一键克隆源码并完整编译 (前端+后端+Docker)"
     echo "3) 登录 Docker Hub"
     echo "4) 推送镜像到 Docker Hub"
     echo "------------------------------------------------"
     echo "【容器部署管理】"
-    echo "11） 部署/启动 Backrest （/home/docker/backrest）"
+    echo "11) 部署/启动 Backrest (/home/docker/backrest)"
     echo "12) 更新镜像"
     echo "13) 备份数据"
     echo "14) 恢复备份"
@@ -9919,7 +10208,7 @@ while true; do
     echo "4) 推送镜像到 Docker Hub"
     echo "------------------------------------------------"
     echo "【容器部署管理】"
-    echo "11） 部署/启动 Certimate （/home/docker/certimate）"
+    echo "11) 部署/启动 Certimate (/home/docker/certimate)"
     echo "12) 更新镜像到最新版本"
     echo "13) 卸载 Certimate"
     echo "0) 返回主菜单"
@@ -9954,12 +10243,12 @@ while true; do
             2)
                 echo -e "\n--- 正在同步 Certimate 最新源码 ---"
                 mkdir -p "$build_dir" && cd "$build_dir"
-                [ -d 'certimate' ] && rm -rf certimate
+                [ -d "certimate" ] && rm -rf certimate
                 
                 git clone --depth 1 "$my_github_url"
                 cd certimate
                 
-                echo -e "\n--- 开始执行 Docker 编译 （使用项目默认配置） ---"
+                echo -e "\n--- 开始执行 Docker 编译 (使用项目默认配置) ---"
                 # 直接使用源码中的 Dockerfile 进行构建
                 sudo docker build -t "$my_docker_img" .
                 
@@ -10035,7 +10324,7 @@ while true; do
 while true; do
     clear
     echo "------------------------------------------------"
-    echo "      MinIO 自编译管理脚本 （自动下载二进制）"
+    echo "      MinIO 自编译管理脚本 (自动下载二进制)"
     echo "------------------------------------------------"
     echo "【源码与镜像管理】"
     echo "1) 安装环境并修复 Docker"
@@ -10044,7 +10333,7 @@ while true; do
     echo "4) 推送镜像到 Docker Hub"
     echo "------------------------------------------------"
     echo "【容器部署管理】"
-    echo "11） 部署/启动 MinIO （/home/docker/minio）"
+    echo "11) 部署/启动 MinIO (/home/docker/minio)"
     echo "12) 更新镜像到最新版本"
     echo "13) 卸载 MinIO"
     echo "0) 返回主菜单"
@@ -10082,13 +10371,13 @@ while true; do
         2)
             echo -e "\n--- 正在同步 MinIO 源码 ---"
             mkdir -p "$build_dir" && cd "$build_dir"
-            [ -d 'minio' ] && rm -rf minio
+            [ -d "minio" ] && rm -rf minio
             git clone --depth 1 "$my_github_url"
             cd minio
 
             echo "--- 准备 MinIO 二进制文件 ---"
             # 检查是否存在二进制文件，如果没有则从官方 release 下载
-            if [ ! -f "minio-${TARGETARCH}.${RELEASE}' ]; then
+            if [ ! -f "minio-${TARGETARCH}.${RELEASE}" ]; then
                 echo "--- 从官方 MinIO 下载二进制文件 ---"
                 curl -L https://dl.min.io/server/minio/release/linux-amd64/minio -o minio-${TARGETARCH}.${RELEASE}
                 curl -L https://dl.min.io/server/minio/release/linux-amd64/minio.minisig -o minio-${TARGETARCH}.${RELEASE}.minisig
@@ -10123,7 +10412,7 @@ while true; do
             
             # 1. 交互式获取账号
             read -p "请输入 MinIO 管理员账号 (直接回车将随机生成): " input_user
-            if [ -z "$input_user' ]; then
+            if [ -z "$input_user" ]; then
                 MINIO_ROOT_USER=$(tr -dc 'A-Z0-9' </dev/urandom | head -c 20)
                 echo "-> 使用随机账号: $MINIO_ROOT_USER"
             else
@@ -10132,7 +10421,7 @@ while true; do
 
             # 2. 交互式获取密码
             read -p "请输入 MinIO 管理员密码 (直接回车将随机生成): " input_pass
-            if [ -z "$input_pass' ]; then
+            if [ -z "$input_pass" ]; then
                 MINIO_ROOT_PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40)
                 echo "-> 使用随机密码: $MINIO_ROOT_PASSWORD"
             else
@@ -10180,7 +10469,7 @@ while true; do
         13)
             echo "--- 卸载 MinIO（删除容器与镜像，保留本地数据）---"
 
-            # 删除容器(如果存在)
+            # 删除容器（如果存在）
             if sudo docker ps -a --format '{{.Names}}' | grep -q '^minio$'; then
                 sudo docker rm -f minio
                 echo "✅ 容器已删除"
@@ -10188,7 +10477,7 @@ while true; do
                 echo "ℹ️ 容器不存在"
             fi
 
-            # 删除镜像(如果存在)
+            # 删除镜像（如果存在）
             if sudo docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^$my_docker_img$"; then
                 sudo docker rmi "$my_docker_img"
                 echo "✅ 镜像已删除"
@@ -10229,10 +10518,10 @@ while true; do
     echo "2) 更新镜像到最新版本"
     echo "------------------------------------------------"
     echo "【数据备份与恢复】"
-    echo "3） 备份数据 （/home/nezhav2-时间）"
+    echo "3) 备份数据 (/home/nezhav2-时间)"
     echo "4) 从 /home/ 恢复数据"
     echo "------------------------------------------------"
-    echo "5） 卸载 Nezha 面板（含 /home/docker/nezha 和 /opt/agent）"
+    echo "5) 卸载 Nezha 面板（含 /home/docker/nezha 和 /opt/agent）"
     echo "6) 只卸载/opt/agent"
     echo "0) 返回上一级"
     echo "------------------------------------------------"
@@ -10266,7 +10555,7 @@ while true; do
                 $docker_img
 
             HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-            [ -z "$HOST_IP' ] && HOST_IP=$(hostname -I | awk '{print $1}')
+            [ -z "$HOST_IP" ] && HOST_IP=$(hostname -I | awk '{print $1}')
 
             echo "✅ 安装完成！访问 http://${HOST_IP}:${HOST_PORT} 账号:admin 密码:admin"
             read -n1 -r -p "回车继续..." key
@@ -10283,7 +10572,7 @@ while true; do
             timestamp=$(date +"%Y%m%d%H%M%S")
             backup_file="/home/nezhav2-$timestamp.tar.gz"
             
-            if [ -d '$install_dir' ]; then
+            if [ -d "$install_dir" ]; then
                 tar -czf "$backup_file" -C "$install_dir" .
                 echo "✅ 数据已备份到 $backup_file"
             else
@@ -10298,7 +10587,7 @@ while true; do
     ls -1 /home/nezhav2-*.tar.gz 2>/dev/null
     latest_backup=$(ls -1 /home/nezhav2-*.tar.gz 2>/dev/null | sort | tail -n1)
 
-    if [ -z "$latest_backup' ]; then
+    if [ -z "$latest_backup" ]; then
         echo "❌ 没有找到备份文件"
         read -n1 -r -p "回车继续..." key
         continue
@@ -10307,7 +10596,7 @@ while true; do
     read -e -p "请输入要恢复的备份文件全路径 [回车使用最新: $latest_backup]: " restore_file
     restore_file=${restore_file:-$latest_backup}
 
-    if [ ! -f "$restore_file' ]; then
+    if [ ! -f "$restore_file" ]; then
         echo "❌ 文件不存在: $restore_file"
         read -n1 -r -p "回车继续..." key
         continue
@@ -10342,7 +10631,7 @@ while true; do
         $docker_img
 
     HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-    [ -z "$HOST_IP' ] && HOST_IP=$(hostname -I | awk '{print $1}')
+    [ -z "$HOST_IP" ] && HOST_IP=$(hostname -I | awk '{print $1}')
 
     echo "✅ 恢复并启动完成！"
     echo "http://${HOST_IP}:${HOST_PORT}"
@@ -10369,15 +10658,15 @@ while true; do
 
     # 查找并停止正在运行的 Agent
     pid=$(pgrep -f 'nezha-agent|nezha/agent|agent' | head -n1)
-    if [ -n "$pid' ]; then
+    if [ -n "$pid" ]; then
         kill -9 $pid
-        echo "✅ Agent 已停止 （PID: $pid）"
+        echo "✅ Agent 已停止 (PID: $pid)"
     else
         echo "ℹ️ 没有正在运行的 Agent"
     fi
 
     # 删除本地 Agent 目录
-    if [ -d '$agent_dir' ]; then
+    if [ -d "$agent_dir" ]; then
         rm -rf "$agent_dir"
         echo "✅ 本地 Agent 目录已删除: $agent_dir"
     else
@@ -10457,12 +10746,12 @@ done
 			# 赋予执行权限
 			chmod +x /home/cdn/edge-admin/bin/edge-admin
 
-			# 启动 edge-admin 后台服务(无日志输出)
+			# 启动 edge-admin 后台服务（无日志输出）
 			nohup /home/cdn/edge-admin/bin/edge-admin start > /dev/null 2>&1 &
 
 			# 添加开机自启
 			crontab -l 2>/dev/null | grep -q '@reboot sleep 10 && nohup /home/cdn/edge-admin/bin/edge-admin start > /dev/null 2>&1 &' || (
-				（crontab -l 2>/dev/null; echo '@reboot sleep 10 && nohup /home/cdn/edge-admin/bin/edge-admin start > /dev/null 2>&1 &'） | crontab -
+				(crontab -l 2>/dev/null; echo '@reboot sleep 10 && nohup /home/cdn/edge-admin/bin/edge-admin start > /dev/null 2>&1 &') | crontab -
 			)
 
 			# 安装 MariaDB
@@ -10565,7 +10854,7 @@ EOF
 			backup_dir="${base_dir}/备份"
 			mkdir -p "$backup_dir"
 
-			if [ "$action" = "1' ]; then
+			if [ "$action" = "1" ]; then
 				timestamp=$(date +"%Y%m%d%H%M%S")
 				program_tar="${backup_dir}/edge-${timestamp}.tar.gz"
 				db_tar="${backup_dir}/mariadb-${timestamp}.tar.gz"
@@ -10587,20 +10876,20 @@ EOF
 				echo "数据库：$db_tar"
 				exit 0
 
-			elif [ "$action" = "2' ]; then
+			elif [ "$action" = "2" ]; then
 				# edge-admin 备份选择
 				echo ""
 				echo "📂 当前可用 edge-admin 备份："
 				ls "$backup_dir"/edge-*.tar.gz 2>/dev/null | nl
 				echo ""
-				read -p "请输入要恢复的 edge-admin 版本编号(回车恢复最新): " edge_index
+				read -p "请输入要恢复的 edge-admin 版本编号（回车恢复最新）: " edge_index
 
 				edge_list=( $(ls -t "$backup_dir"/edge-*.tar.gz 2>/dev/null) )
-				if [ -z "${edge_list[0]}' ]; then
+				if [ -z "${edge_list[0]}" ]; then
 					echo "❌ 找不到 edge-admin 备份文件"
 					exit 1
 				fi
-				if [[ -z "$edge_index' ]]; then
+				if [[ -z "$edge_index" ]]; then
 					program_tar="${edge_list[0]}"
 				else
 					index=$((edge_index - 1))
@@ -10612,14 +10901,14 @@ EOF
 				echo "📂 当前可用 mysql 备份："
 				ls "$backup_dir"/mariadb-*.tar.gz 2>/dev/null | nl
 				echo ""
-				read -p "请输入要恢复的 mysql 版本编号(回车恢复最新): " db_index
+				read -p "请输入要恢复的 mysql 版本编号（回车恢复最新）: " db_index
 
 				db_list=( $(ls -t "$backup_dir"/mariadb-*.tar.gz 2>/dev/null) )
-				if [ -z "${db_list[0]}' ]; then
+				if [ -z "${db_list[0]}" ]; then
 					echo "❌ 找不到 mysql 备份文件"
 					exit 1
 				fi
-				if [[ -z "$db_index' ]]; then
+				if [[ -z "$db_index" ]]; then
 					db_tar="${db_list[0]}"
 				else
 					index=$((db_index - 1))
@@ -10651,7 +10940,7 @@ EOF
 
 				# 设置开机自启
 				crontab -l 2>/dev/null | grep -q "edge-admin/bin/edge-admin start" || (
-					（crontab -l 2>/dev/null; echo "@reboot sleep 10 && nohup $base_dir/edge-admin/bin/edge-admin start > /dev/null 2>&1 &"） | crontab -
+					(crontab -l 2>/dev/null; echo "@reboot sleep 10 && nohup $base_dir/edge-admin/bin/edge-admin start > /dev/null 2>&1 &") | crontab -
 				)
 
 				clear
@@ -10660,7 +10949,7 @@ EOF
 				echo "edge-admin 访问地址: http://$local_ip:7788"
 				exit 0
 
-			elif [ "$action" = "3' ]; then
+			elif [ "$action" = "3" ]; then
 				systemctl stop mariadb
 				systemctl disable mariadb
 				apt purge -y mariadb-server mariadb-common > /dev/null 2>&1
@@ -10713,8 +11002,8 @@ EOF
 
 			    if docker ps -a --format '{{.Names}}' | grep -qw "$name"; then
 			      echo "已安装$i. $name"
-			      echo "访问地址: http://$（curl -s ipv4.ip.sb）:$port"
-			      echo "访问地址: http://$（curl -s ipv6.ip.sb）:$port"
+			      echo "访问地址: http://$(curl -s ipv4.ip.sb):$port"
+			      echo "访问地址: http://$(curl -s ipv6.ip.sb):$port"
 			      echo "介绍: $intro"
 			      echo "---------------------------------------------"
 			    fi
@@ -10751,7 +11040,7 @@ EOF
 			echo "23. alpine-mate     【Alpine，MATE，轻量桌面】"
 			echo "24. alpine-i3       【Alpine，i3，极简窗口管理器】"
 			echo "0. 返回上一级"
-			echo -n "请输入你的选择（数字）: "
+			echo -n "请输入你的选择(数字): "
 			read img_choice
 
 			case "$img_choice" in
@@ -10806,8 +11095,8 @@ EOF
 						if docker ps -a --format '{{.Names}}' | grep -qw "$docker_name"; then
 							echo "---------------------------------------------"
 							echo "容器 $docker_name 已安装，跳过安装"
-							echo "访问地址: http://$（curl -s ipv4.ip.sb）:$docker_port"
-       							echo "访问地址: http://$（curl -s ipv6.ip.sb）:$docker_port"
+							echo "访问地址: http://$(curl -s ipv4.ip.sb):$docker_port"
+       							echo "访问地址: http://$(curl -s ipv6.ip.sb):$docker_port"
 							echo "---------------------------------------------"
 						else
 							random_passwd=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 18)
@@ -10829,8 +11118,8 @@ EOF
 								--restart unless-stopped \
 								$docker_img
 							echo "安装完成"
-							echo "访问地址: http://$（curl -s ipv4.ip.sb）:$docker_port"
-							echo "访问地址: http://$（curl -s ipv6.ip.sb）:$docker_port"
+							echo "访问地址: http://$(curl -s ipv4.ip.sb):$docker_port"
+							echo "访问地址: http://$(curl -s ipv6.ip.sb):$docker_port"
 							echo "用户名: admin"
 							echo "密码: $random_passwd"
 						fi
@@ -10848,7 +11137,7 @@ EOF
 						;;
 					4)
 						latest_backup=$(ls -t /home/docker/${docker_name}_backup_*.tar.gz 2>/dev/null | head -n 1)
-						if [ -z "$latest_backup' ]; then
+						if [ -z "$latest_backup" ]; then
 							echo "未找到备份文件"
 						else
 							echo "恢复备份文件: $latest_backup"
@@ -10914,14 +11203,14 @@ EOF
 
 		    echo "------------------------"
 		    # 读取用户输入
-		    read -e -p "请输入本地目录路径(如 /home/web/wangpan/): " local_path
+		    read -e -p "请输入本地目录路径（如 /home/web/wangpan/）: " local_path
 		    # 如果本地路径末尾没有 /，则自动添加
 		    [[ "$local_path" != */ ]] && local_path="${local_path}/"
 
-		    read -e -p "请输入远程 VPS 的 IP 地址(例如 1.1.1.1): " remote_ip
+		    read -e -p "请输入远程 VPS 的 IP 地址（例如 1.1.1.1）: " remote_ip
 
-		    read -e -p "请输入远程目录路径(默认与本地一致，直接回车即可): " remote_path
-		    if [ -z "$remote_path' ]; then
+		    read -e -p "请输入远程目录路径（默认与本地一致，直接回车即可）: " remote_path
+		    if [ -z "$remote_path" ]; then
 		        remote_path="$local_path"
 		        echo "📂 未输入远程路径，已自动设置为与本地路径一致：$remote_path"
 		    fi
@@ -11195,8 +11484,8 @@ linux_Settings() {
 		  1)
 			  while true; do
 				  clear
-				  read -e -p "请输入你的快捷按键(输入0退出): " kuaijiejian
-				  if [ "$kuaijiejian" == "0' ]; then
+				  read -e -p "请输入你的快捷按键（输入0退出）: " kuaijiejian
+				  if [ "$kuaijiejian" == "0" ]; then
 					   break_end
 					   linux_Settings
 				  fi
@@ -11239,10 +11528,10 @@ linux_Settings() {
 			echo "推荐版本:  3.12    3.11    3.10    3.9    3.8    2.7"
 			echo "查询更多版本: https://www.python.org/downloads/"
 			echo "------------"
-			read -e -p "输入你要安装的python版本号(输入0退出): " py_new_v
+			read -e -p "输入你要安装的python版本号（输入0退出）: " py_new_v
 
 
-			if [[ "$py_new_v" == "0' ]]; then
+			if [[ "$py_new_v" == "0" ]]; then
 				send_stats "脚本PY管理"
 				break_end
 				linux_Settings
@@ -11284,7 +11573,7 @@ linux_Settings() {
 				cat << EOF >> ~/.bashrc
 
 export PYENV_ROOT="\$HOME/.pyenv"
-if [[ -d '\$PYENV_ROOT/bin' ]]; then
+if [[ -d "\$PYENV_ROOT/bin" ]]; then
   export PATH="\$PYENV_ROOT/bin:\$PATH"
 fi
 eval "\$(pyenv init --path)"
@@ -11421,8 +11710,8 @@ EOF
 		  9)
 			root_use
 			send_stats "新用户禁用root"
-			read -e -p "请输入新用户名(输入0退出): " new_username
-			if [ "$new_username" == "0' ]; then
+			read -e -p "请输入新用户名（输入0退出）: " new_username
+			if [ "$new_username" == "0" ]; then
 				break_end
 				linux_Settings
 			fi
@@ -11430,7 +11719,7 @@ EOF
 			useradd -m -s /bin/bash "$new_username"
 			passwd "$new_username"
 
-			echo "$new_username ALL=（ALL:ALL） ALL" | tee -a /etc/sudoers
+			echo "$new_username ALL=(ALL:ALL) ALL" | tee -a /etc/sudoers
 
 			passwd -l root
 
@@ -11541,7 +11830,7 @@ EOF
 				printf "%-24s %-34s %-20s %-10s\n" "用户名" "用户权限" "用户组" "sudo权限"
 				while IFS=: read -r username _ userid groupid _ _ homedir shell; do
 					groups=$(groups "$username" | cut -d : -f 2)
-					sudo_status=$（sudo -n -lU "$username" 2>/dev/null | grep -q '（ALL : ALL）' && echo "Yes" || echo "No"）
+					sudo_status=$(sudo -n -lU "$username" 2>/dev/null | grep -q '(ALL : ALL)' && echo "Yes" || echo "No")
 					printf "%-20s %-30s %-20s %-10s\n" "$username" "$homedir" "$groups" "$sudo_status"
 				done < /etc/passwd
 
@@ -11580,7 +11869,7 @@ EOF
 					   passwd "$new_username"
 
 					   # 赋予新用户sudo权限
-					   echo "$new_username ALL=（ALL:ALL） ALL" | sudo tee -a /etc/sudoers
+					   echo "$new_username ALL=(ALL:ALL) ALL" | sudo tee -a /etc/sudoers
 
 					   echo "操作已完成。"
 
@@ -11588,7 +11877,7 @@ EOF
 					  3)
 					   read -e -p "请输入用户名: " username
 					   # 赋予新用户sudo权限
-					   echo "$username ALL=（ALL:ALL） ALL" | sudo tee -a /etc/sudoers
+					   echo "$username ALL=(ALL:ALL) ALL" | sudo tee -a /etc/sudoers
 						  ;;
 					  4)
 					   read -e -p "请输入用户名: " username
@@ -11862,7 +12151,7 @@ EOF
 				  [Yy])
 					if [ -r /etc/os-release ]; then
 						. /etc/os-release
-						if [ "$ID" != "debian' ] && [ "$ID" != "ubuntu' ]; then
+						if [ "$ID" != "debian" ] && [ "$ID" != "ubuntu" ]; then
 							echo "当前环境不支持，仅支持Debian和Ubuntu系统"
 							break_end
 							linux_Settings
@@ -11917,8 +12206,8 @@ EOF
 			  current_hostname=$(uname -n)
 			  echo -e "当前主机名: ${gl_huang}$current_hostname${gl_bai}"
 			  echo "------------------------"
-			  read -e -p "请输入新的主机名(输入0退出): " new_hostname
-			  if [ -n "$new_hostname' ] && [ "$new_hostname" != "0' ]; then
+			  read -e -p "请输入新的主机名（输入0退出）: " new_hostname
+			  if [ -n "$new_hostname" ] && [ "$new_hostname" != "0" ]; then
 				  if [ -f /etc/alpine-release ]; then
 					  # Alpine
 					  echo "$new_hostname" > /etc/hostname
@@ -12015,19 +12304,19 @@ EOF
 						  case $dingshi in
 							  1)
 								  read -e -p "选择每月的几号执行任务？ (1-30): " day
-								  （crontab -l ; echo "0 0 $day * * $newquest"） | crontab - > /dev/null 2>&1
+								  (crontab -l ; echo "0 0 $day * * $newquest") | crontab - > /dev/null 2>&1
 								  ;;
 							  2)
 								  read -e -p "选择周几执行任务？ (0-6，0代表星期日): " weekday
-								  （crontab -l ; echo "0 0 * * $weekday $newquest"） | crontab - > /dev/null 2>&1
+								  (crontab -l ; echo "0 0 * * $weekday $newquest") | crontab - > /dev/null 2>&1
 								  ;;
 							  3)
-								  read -e -p "选择每天几点执行任务？(小时，0-23): " hour
-								  （crontab -l ; echo "0 $hour * * * $newquest"） | crontab - > /dev/null 2>&1
+								  read -e -p "选择每天几点执行任务？（小时，0-23）: " hour
+								  (crontab -l ; echo "0 $hour * * * $newquest") | crontab - > /dev/null 2>&1
 								  ;;
 							  4)
-								  read -e -p "输入每小时的第几分钟执行任务？(分钟，0-60): " minute
-								  （crontab -l ; echo "$minute * * * * $newquest"） | crontab - > /dev/null 2>&1
+								  read -e -p "输入每小时的第几分钟执行任务？（分钟，0-60）: " minute
+								  (crontab -l ; echo "$minute * * * * $newquest") | crontab - > /dev/null 2>&1
 								  ;;
 							  *)
 								  break  # 跳出
@@ -12136,7 +12425,7 @@ EOF
 							;;
 					esac
 
-			elif [ -x "$(command -v fail2ban-client)' ] ; then
+			elif [ -x "$(command -v fail2ban-client)" ] ; then
 				clear
 				echo "卸载旧版fail2ban"
 				read -e -p "确定继续吗？(Y/N): " choice
@@ -12217,9 +12506,9 @@ EOF
 				  1)
 					# 输入新的虚拟内存大小
 					echo "如果实际服务器就100G流量，可设置阈值为95G，提前关机，以免出现流量误差或溢出."
-					read -e -p "请输入进站流量阈值(单位为GB): " rx_threshold_gb
-					read -e -p "请输入出站流量阈值(单位为GB): " tx_threshold_gb
-					read -e -p "请输入流量重置日期(默认每月1日重置): " cz_day
+					read -e -p "请输入进站流量阈值（单位为GB）: " rx_threshold_gb
+					read -e -p "请输入出站流量阈值（单位为GB）: " tx_threshold_gb
+					read -e -p "请输入流量重置日期（默认每月1日重置）: " cz_day
 					cz_day=${cz_day:-1}
 
 					cd ~
@@ -12229,9 +12518,9 @@ EOF
 					sed -i "s/120/$tx_threshold_gb/g" ~/Limiting_Shut_down.sh
 					check_crontab_installed
 					crontab -l | grep -v '~/Limiting_Shut_down.sh' | crontab -
-					（crontab -l ; echo "* * * * * ~/Limiting_Shut_down.sh"） | crontab - > /dev/null 2>&1
+					(crontab -l ; echo "* * * * * ~/Limiting_Shut_down.sh") | crontab - > /dev/null 2>&1
 					crontab -l | grep -v 'reboot' | crontab -
-					（crontab -l ; echo "0 1 $cz_day * * reboot"） | crontab - > /dev/null 2>&1
+					(crontab -l ; echo "0 1 $cz_day * * reboot") | crontab - > /dev/null 2>&1
 					echo "限流关机已设置"
 					send_stats "限流关机已设置"
 					;;
@@ -12303,7 +12592,7 @@ EOF
 				  tmux kill-session -t TG-check-notify > /dev/null 2>&1
 				  tmux new -d -s TG-check-notify "~/TG-check-notify.sh"
 				  crontab -l | grep -v '~/TG-check-notify.sh' | crontab - > /dev/null 2>&1
-				  （crontab -l ; echo "@reboot tmux new -d -s TG-check-notify '~/TG-check-notify.sh'"） | crontab - > /dev/null 2>&1
+				  (crontab -l ; echo "@reboot tmux new -d -s TG-check-notify '~/TG-check-notify.sh'") | crontab - > /dev/null 2>&1
 
 				  curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/TG-SSH-check-notify.sh > /dev/null 2>&1
 				  sed -i "3i$(grep '^TELEGRAM_BOT_TOKEN=' ~/TG-check-notify.sh)" TG-SSH-check-notify.sh > /dev/null 2>&1
@@ -12389,7 +12678,7 @@ EOF
 			  # 判断是否要留言
 			  read -e -p "是否要留言？(y/n): " leave_message
 
-			  if [ "$leave_message" == "y' ] || [ "$leave_message" == "Y' ]; then
+			  if [ "$leave_message" == "y" ] || [ "$leave_message" == "Y" ]; then
 				  # 输入新的留言内容
 				  read -e -p "输入你的昵称: " nicheng
 				  read -e -p "输入你的聊天内容: " neirong
@@ -12460,7 +12749,7 @@ EOF
 
 				  echo "------------------------------------------------"
 				  country=$(curl -s ipinfo.io/country)
-				  if [ "$country" = "CN' ]; then
+				  if [ "$country" = "CN" ]; then
 					  dns1_ipv4="223.5.5.5"
 					  dns2_ipv4="183.60.83.19"
 					  dns1_ipv6="2400:3200::1"
@@ -12654,9 +12943,9 @@ EOF
 						  send_stats "添加集群服务器"
 						  read -e -p "服务器名称: " server_name
 						  read -e -p "服务器IP: " server_ip
-						  read -e -p "服务器端口(22): " server_port
+						  read -e -p "服务器端口（22）: " server_port
 						  server_port=${server_port:-22}
-						  read -e -p "服务器用户名(root): " server_username
+						  read -e -p "服务器用户名（root）: " server_username
 						  server_username=${server_username:-root}
 						  read -e -p "服务器用户密码: " server_password
 
@@ -12884,14 +13173,14 @@ linux_file() {
 
 			23) # 移动文件或目录
 				read -e -p "请输入要移动的文件或目录路径: " src_path
-				if [ ! -e "$src_path' ]; then
+				if [ ! -e "$src_path" ]; then
 					echo "错误: 文件或目录不存在。"
 					send_stats "移动文件或目录失败: 文件或目录不存在"
 					continue
 				fi
 
 				read -e -p "请输入目标路径 (包括新文件名或目录名): " dest_path
-				if [ -z "$dest_path' ]; then
+				if [ -z "$dest_path" ]; then
 					echo "错误: 请输入目标路径。"
 					send_stats "移动文件或目录失败: 目标路径未指定"
 					continue
@@ -12904,14 +13193,14 @@ linux_file() {
 
 		   24) # 复制文件目录
 				read -e -p "请输入要复制的文件或目录路径: " src_path
-				if [ ! -e "$src_path' ]; then
+				if [ ! -e "$src_path" ]; then
 					echo "错误: 文件或目录不存在。"
 					send_stats "复制文件或目录失败: 文件或目录不存在"
 					continue
 				fi
 
 				read -e -p "请输入目标路径 (包括新文件名或目录名): " dest_path
-				if [ -z "$dest_path' ]; then
+				if [ -z "$dest_path" ]; then
 					echo "错误: 请输入目标路径。"
 					send_stats "复制文件或目录失败: 目标路径未指定"
 					continue
@@ -12925,14 +13214,14 @@ linux_file() {
 
 			 25) # 传送文件至远端服务器
 				read -e -p "请输入要传送的文件路径: " file_to_transfer
-				if [ ! -f "$file_to_transfer' ]; then
+				if [ ! -f "$file_to_transfer" ]; then
 					echo "错误: 文件不存在。"
 					send_stats "传送文件失败: 文件不存在"
 					continue
 				fi
 
 				read -e -p "请输入远端服务器IP: " remote_ip
-				if [ -z "$remote_ip' ]; then
+				if [ -z "$remote_ip" ]; then
 					echo "错误: 请输入远端服务器IP。"
 					send_stats "传送文件失败: 未输入远端服务器IP"
 					continue
@@ -12943,7 +13232,7 @@ linux_file() {
 
 				read -e -p "请输入远端服务器密码: " -s remote_password
 				echo
-				if [ -z "$remote_password' ]; then
+				if [ -z "$remote_password" ]; then
 					echo "错误: 请输入远端服务器密码。"
 					send_stats "传送文件失败: 未输入远端服务器密码"
 					continue
@@ -13004,7 +13293,7 @@ awahello_update() {
 	curl -s ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/awahello_sh_log.txt | tail -n 35
 	sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/awash.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
 
-	if [ "$sh_v" = "$sh_v_new' ]; then
+	if [ "$sh_v" = "$sh_v_new" ]; then
 		echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
 		send_stats "脚本已经最新了，无需更新"
 	else
@@ -13016,7 +13305,7 @@ awahello_update() {
 			[Yy])
 				clear
 				country=$(curl -s ipinfo.io/country)
-				if [ "$country" = "CN' ]; then
+				if [ "$country" = "CN" ]; then
 					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/cn/awash.sh && chmod +x awash.sh
 				else
 					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/awash.sh && chmod +x awash.sh
@@ -13231,10 +13520,10 @@ else
 
 		ssl)
 		   shift
-			if [ "$1" = "ps' ]; then
+			if [ "$1" = "ps" ]; then
 				send_stats "查看证书状态"
 				ssl_ps
-			elif [ -z "$1' ]; then
+			elif [ -z "$1" ]; then
 				add_ssl
 				send_stats "快速申请证书"
 			else
