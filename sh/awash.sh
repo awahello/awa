@@ -18,24 +18,26 @@ gl_kjlan='\033[96m'
 
 
 # 提示用户同意条款
-UserLicenseAgreement（） {
-	clear
-	echo -e "${gl_kjlan}欢迎使用awa脚本工具箱${gl_bai}"
-	echo "首次使用脚本，请先阅读并同意用户许可协议。"
-	echo "用户许可协议: https://www.bing.com/"
-	echo -e "----------------------"
-	read -r -p "是否同意以上条款？（y/n）: " user_input
+UserLicenseAgreement () {
+    clear
+    echo -e "${gl_kjlan}欢迎使用awa脚本工具箱${gl_bai}"
+    echo "首次使用脚本，请先阅读并同意用户许可协议。"
+    echo "用户许可协议: https://www.bing.com/"
+    echo "-----------------------------------"
+    read -r -p "是否同意以上条款？(y/n) :" user_input
 
-
-	if [ "$user_input" = "y" ] || [ "$user_input" = "Y" ]; then
-		send_stats "许可同意"
-		sed -i 's/^permission_granted="false"/permission_granted="true"/' ./awash.sh
-		sed -i 's/^permission_granted="false"/permission_granted="true"/' /usr/local/bin/k
-	else
-		send_stats "许可拒绝"
-		clear
-		exit
-	fi
+    # 修复：规范标准的 if 语法判断
+    if [ "$user_input" = "y" ] || [ "$user_input" = "Y" ]; then
+        # 修复：注释掉不存在的发送统计函数
+        # send_stats "许可同意"
+        sed -i 's/permission_granted="false"/permission_granted="true"/' ./awash.sh
+        sed -i 's/permission_granted="false"/permission_granted="true"/' /usr/local/bin/k
+    else
+        # 修复：注释掉不存在的发送统计函数
+        # send_stats "许可拒绝"
+        clear
+        exit
+    fi
 }
 
 
