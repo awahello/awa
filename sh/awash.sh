@@ -18,26 +18,24 @@ gl_kjlan='\033[96m'
 
 
 # 提示用户同意条款
-UserLicenseAgreement () {
-    clear
-    echo -e "${gl_kjlan}欢迎使用awa脚本工具箱${gl_bai}"
-    echo "首次使用脚本，请先阅读并同意用户许可协议。"
-    echo "用户许可协议: https://www.bing.com/"
-    echo "-----------------------------------"
-    read -r -p "是否同意以上条款？(y/n) :" user_input
+UserLicenseAgreement() {
+	clear
+	echo -e "${gl_kjlan}欢迎使用awa脚本工具箱${gl_bai}"
+	echo "首次使用脚本，请先阅读并同意用户许可协议。"
+	echo "用户许可协议: https://www.bing.com/"
+	echo -e "----------------------"
+	read -r -p "是否同意以上条款？(y/n): " user_input
 
-    # 修复：规范标准的 if 语法判断
-    if [ "$user_input" = "y" ] || [ "$user_input" = "Y" ]; then
-        # 修复：注释掉不存在的发送统计函数
-        # send_stats "许可同意"
-        sed -i 's/permission_granted="false"/permission_granted="true"/' ./awash.sh
-        sed -i 's/permission_granted="false"/permission_granted="true"/' /usr/local/bin/k
-    else
-        # 修复：注释掉不存在的发送统计函数
-        # send_stats "许可拒绝"
-        clear
-        exit
-    fi
+
+	if [ "$user_input" = "y" ] || [ "$user_input" = "Y" ]; then
+		send_stats "许可同意"
+		sed -i 's/^permission_granted="false"/permission_granted="true"/' ./awash.sh
+		sed -i 's/^permission_granted="false"/permission_granted="true"/' /usr/local/bin/k
+	else
+		send_stats "许可拒绝"
+		clear
+		exit
+	fi
 }
 
 
@@ -5379,7 +5377,7 @@ linux_panel() {
 	  echo -e "▶ 面板工具"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}1.   ${gl_bai}宝塔面板官方版                      ${gl_kjlan}2.   ${gl_bai}aaPanel宝塔国际版"
-	  echo -e "${gl_kjlan}1A.  ${gl_bai}升级宝塔面板开心企业版(仅升级)"     ${gl_kjlan}1B.  ${gl_bai}S-UI面板"    
+	  echo -e "${gl_kjlan}1A.  ${gl_bai}升级宝塔面板开心企业版（仅升级）"     ${gl_kjlan}1B.  ${gl_bai}S-UI面板"    
 	  echo -e "${gl_kjlan}3.   ${gl_bai}1Panel新一代管理面板                ${gl_kjlan}4.   ${gl_bai}NginxProxyManager可视化面板"
 	  echo -e "${gl_kjlan}5.   ${gl_bai}哪吒探针备份与恢复                    ${gl_kjlan}6.   ${gl_bai}Ubuntu远程桌面网页版3006端口"
 	  echo -e "${gl_kjlan}7.   ${gl_bai}哪吒探针VPS监控面板                 ${gl_kjlan}8.   ${gl_bai}QB离线BT磁力下载面板"
@@ -5416,22 +5414,22 @@ linux_panel() {
    	  echo -e "${gl_kjlan}------------------------"
    	  echo -e "${gl_kjlan}59.  ${gl_bai}docker安装rustdesk服务端 ${gl_huang}★${gl_bai}           ${gl_kjlan}60.  ${gl_bai}docker安装rustdesk中继端"
 	  echo -e "${gl_kjlan}61.  ${gl_bai}安装rustdesk远程桌面 ${gl_huang}★${gl_bai}               ${gl_kjlan}62.  ${gl_bai}安装x-ui"
-	  echo -e "${gl_kjlan}63.  ${gl_bai}安装rclone搭配64使用(82.86) ${gl_huang}★${gl_bai}      ${gl_kjlan}64.  ${gl_bai}安装r2beifen备份(82.86)"
+	  echo -e "${gl_kjlan}63.  ${gl_bai}安装rclone搭配64使用(82.86) ${gl_huang}★${gl_bai}      ${gl_kjlan}64.  ${gl_bai}安装r2beifen备份（82.86）"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}65.  ${gl_bai}安装caddy DNS版使用66配置反代 ${gl_huang}★${gl_bai}        ${gl_kjlan}66.  ${gl_bai}安装65caddy DNS配置版"
 	  echo -e "${gl_kjlan}67.  ${gl_bai}ownCloud网盘安装 ${gl_huang}★${gl_bai}                    ${gl_kjlan}68.  ${gl_bai}安装M38u8安装完成使用58添加反代"
 	  echo -e "${gl_kjlan}69.  ${gl_bai}it-tools工具箱 ${gl_huang}★${gl_bai}                      ${gl_kjlan}70.  ${gl_bai}安装盘搜"
 	  echo -e "${gl_kjlan}71.  ${gl_bai}安装zfile网盘 ${gl_huang}★${gl_bai}                      ${gl_kjlan}72.  ${gl_bai}安装Discourse论坛"
 	  echo -e "${gl_kjlan}------------------------"
-	  echo -e "${gl_kjlan}73.  ${gl_bai}安装minio对象存储(74.88) ${gl_huang}★${gl_bai}           ${gl_kjlan}74.  ${gl_bai}添加对象存储api(73.88)"
+	  echo -e "${gl_kjlan}73.  ${gl_bai}安装minio对象存储(74.88) ${gl_huang}★${gl_bai}           ${gl_kjlan}74.  ${gl_bai}添加对象存储api（73.88）"
 	  echo -e "${gl_kjlan}75.  ${gl_bai}docker安装openliat ${gl_huang}★${gl_bai}                 ${gl_kjlan}76.  ${gl_bai}vaultwarden管理员禁止注册 ${gl_huang}★${gl_bai} "
 	  echo -e "${gl_kjlan}77.  ${gl_bai}邮箱caddy与nginx都可用 ${gl_huang}★${gl_bai}              ${gl_kjlan}78.  ${gl_bai}Caddy安装mailcow邮箱 ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}79.  ${gl_bai}自编译ssh Nexterm ${gl_huang}★${gl_bai}                  ${gl_kjlan}80.  ${gl_bai}自编译导航Sun-Panel ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}81.  ${gl_bai}Sun-Panel压缩包安装33docker ${gl_huang}★${gl_bai}         ${gl_kjlan}82.  ${gl_bai}s3自动备份安装包(63.64.86) ${gl_huang}★${gl_bai}"
-	  echo -e "${gl_kjlan}83.  ${gl_bai}自编译caddy-dns ${gl_huang}★${gl_bai}                    ${gl_kjlan}84.  ${gl_bai}Hitokoto API (一言)  ${gl_huang}★${gl_bai}"
-	  echo -e "${gl_kjlan}85.  ${gl_bai}自编译openlist ${gl_huang}★${gl_bai}                     ${gl_kjlan}86.  ${gl_bai}Backrest 资源备份(63.64.82) ${gl_huang}★${gl_bai}"
-	  echo -e "${gl_kjlan}87.  ${gl_bai}Certimate 证书管理 ${gl_huang}★${gl_bai}                  ${gl_kjlan}88.  ${gl_bai}自编译minio(73.74) ${gl_huang}★${gl_bai}"
+	  echo -e "${gl_kjlan}83.  ${gl_bai}自编译caddy-dns ${gl_huang}★${gl_bai}                    ${gl_kjlan}84.  ${gl_bai}Hitokoto API （一言）  ${gl_huang}★${gl_bai}"
+	  echo -e "${gl_kjlan}85.  ${gl_bai}自编译openlist ${gl_huang}★${gl_bai}                     ${gl_kjlan}86.  ${gl_bai}Backrest 资源备份（63.64.82） ${gl_huang}★${gl_bai}"
+	  echo -e "${gl_kjlan}87.  ${gl_bai}Certimate 证书管理 ${gl_huang}★${gl_bai}                  ${gl_kjlan}88.  ${gl_bai}自编译minio（73.74） ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}89.  ${gl_bai}自编译docker安装哪吒v2官方7号 ${gl_huang}★${gl_bai}         ${gl_kjlan}90.  ${gl_bai}BTC安装 ${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}91.  ${gl_bai}自动进行谷歌浏览 ${gl_huang}★${gl_bai}"
