@@ -416,7 +416,7 @@ case $choice in
 
   k)
     cd ~
-    curl -sS -O https://akkdiy.cn/awash.sh && chmod +x awash.sh && ./awash.sh
+    curl -sS -O https://raw.githubusercontent.com/awahello/awa/main/sh/awash.sh && chmod +x awash.sh && ./awash.sh
     exit
     ;;
 

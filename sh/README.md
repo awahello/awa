@@ -1,231 +1,130 @@
-# 一键脚本工具.
+# awa · 一键脚本工具
 
-## 介绍
-awa 的 Shell 脚本工具是一款全能脚本工具箱，专为 VPS 监控、测试和管理而设计。无论您是初学者还是经验丰富的用户，该工具都能为您提供便捷的解决方案。集成了独创的 Docker 管理功能，让您轻松管理容器化应用；LNMP建站解决方案 能帮助您快速搭建网站，站点优化，防御，备份还原迁移一应俱全；并且整合了各类系统工具面板的安装及使用，使系统维护变得更加简单。我们的目标是成为全网最优秀的 VPS 一键脚本工具，为用户提供高效、便捷的科技支持。
-***
+面向 VPS 的交互式脚本工具箱：环境部署、LNMP 建站、Docker 管理、备份迁移、系统工具。
 
-### awa一键脚本工具 的支持列表：
->Debian
->Ubuntu
->Cent OS
-***
+- 版本：**3.1.5**
+- 支持：Debian 11/12 · Ubuntu 20.04/22.04/24.04 · CentOS 7/8 · AlmaLinux / RockyLinux
+- 需要 root 权限
 
-## 使用方法
-### Debian / Ubuntu 安装下载工具
-```bash
-apt update -y  && apt install -y curl
-```
-### CentOS 安装下载工具
-```bash
-yum update -y  && yum install -y curl
-```
-***
-### 一键脚本
-```bash
-curl -sS -O https://akkdiy.cn/awash.sh && chmod +x awash.sh && ./awash.sh
-```
-or
-```bash
-curl -sS -O https://raw.githubusercontent.com/awahello/awa/main/sh/awash.sh && chmod +x awash.sh && ./awash.sh
-```
--
--
--
--
--
--
--
--
--
--
--
--
--
-自己配置网站文件内容
+## 安装依赖
+
+Debian / Ubuntu：
 
 ```bash
-curl -sS -O https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/awash.sh && chmod +x awash.sh && ./awash.sh
+apt update -y && apt install -y curl
 ```
--
--
--
-```bash
-bash <(curl -sS https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/awash.sh) 
-```
--
--
--
-1.手动备份迁移
 
-按时间戳打包
+CentOS / AlmaLinux / Rocky：
+
+```bash
+yum update -y && yum install -y curl
+```
+
+## 运行
+
+推荐用这种方式（不落盘，直接执行）：
+
+```bash
+bash <(curl -sS https://raw.githubusercontent.com/awahello/awa/main/sh/awash.sh)
+```
+
+或者下载到本地再跑：
+
+```bash
+curl -sS -O https://raw.githubusercontent.com/awahello/awa/main/sh/awash.sh
+chmod +x awash.sh && ./awash.sh
+```
+
+> 国内网络访问 `raw.githubusercontent.com` 经常超时。脚本本身不挑 CDN，
+> 把域名换成任意 GitHub 加速地址即可，或者本地 `wget` 后 `scp` 上去。
+
+国内镜像版（下载源换成国内加速）：
+
+```bash
+bash <(curl -sS https://raw.githubusercontent.com/awahello/awa/main/sh/cn/awash.sh)
+```
+
+## 功能菜单
+
+运行后会看到交互式菜单，主要分这几块：
+
+| 分类 | 内容 |
+|---|---|
+| 系统信息 | CPU / 内存 / 磁盘 / 流量 / 系统版本检测 |
+| 环境部署 | Docker、Nginx、MySQL、PHP、Redis、Node、Python |
+| 建站 | LNMP 一键部署、站点管理、SSL 证书（含自动续期）、反向代理 |
+| Docker | 容器管理、镜像管理、常用应用一键起 |
+| 备份迁移 | 网站打包、数据库导出、S3 / 异地备份、整机迁移 |
+| 系统工具 | 换源、BBR、防火墙、SSH 加固、时区、重装系统 |
+| 应用部署 | Palworld、Discourse、Mailcaddy、MinIO、Bitcoin 节点等 |
+
+## 备份与迁移速查
+
+按时间戳打包站点：
+
 ```bash
 cd /home/ && tar czvf web_$(date +"%Y%m%d%H%M%S").tar.gz web
 ```
 
-传输最新的tar压缩包到其他VPS
+把最新的包传到另一台机器：
+
 ```bash
-cd /home/ && ls -t /home/*.tar.gz | head -1 | xargs -I {} scp {} root@0.0.0.0:/home/
+cd /home/ && ls -t /home/*.tar.gz | head -1 | xargs -I {} scp {} root@目标IP:/home/
 ```
 
+远端解压最新的包：
 
-只保留3个压缩包
+```bash
+cd /home/ && ls -t /home/*.tar.gz | head -1 | xargs -I {} tar -xzf {}
+```
+
+只保留最近 3 个包：
+
 ```bash
 cd /home/ && ls -t /home/*.tar.gz | tail -n +4 | xargs -I {} rm {}
 ```
 
+自动备份到另一台 VPS，先装依赖：
 
-远端机器解压最新tar文件
-```bash
-cd /home/ && ls -t /home/*.tar.gz | head -1 | xargs -I {} tar -xzf {}
-```
--
--
--
-
-自动备份到另一台vps上下载sh脚本
 ```bash
 apt update -y && apt install -y wget sudo sshpass
 ```
+
+下载备份脚本并改配置（注意 `wget` 要用 `-O` 指定文件名）：
+
 ```bash
 cd /home
-```
-```bash
-wget beifen.sh https://raw.githubusercontent.com/awahello/awa/refs/heads/main/sh/beifen.sh
-```
-```bash
+wget -O beifen.sh https://raw.githubusercontent.com/awahello/awa/main/sh/beifen.sh
 chmod +x beifen.sh
-```
-```bash
 nano beifen.sh
 ```
 
+## 注意
 
+- 脚本会修改系统配置（防火墙、内核参数、软件源），**先在测试机跑一遍**
+- `Tools/Linux_reinstall/` 下的重装脚本会**清空磁盘**，执行前确认没有重要数据
+- 备份默认落在 `/home`，注意剩余空间
+- 部分功能依赖外网（Docker Hub、GitHub、各软件源），国内可能需要换源
 
-运行sh脚本
-```bash
-./beifen.sh
-```
--
--
--
--
--
--
--
-# sshpass 工具安装
-## 在Ubuntu/Debian系统上
-```bash
-sudo apt-get update
-sudo apt-get install sshpass
-```
-## 在CentOS/RHEL系统上，你可以使用以下命令来安装：
-```bash
-sudo yum install epel-release
-sudo yum install sshpass
-```
--
--
--
--
--
-运行前先连接一次
-```bash
-ls -t /home/beifen/*.tar.gz | head -1 | xargs -I {} sshpass -p 'vps密码' scp -o StrictHostKeyChecking=no -P 22 {} root@vpsip:/home/
-```
-如果远端VPS重装系统了或是密码更改了。需要将之前连接的认证清除掉！
-```bash
-ssh-keygen -f "/root/.ssh/known_hosts" -R "0.0.0.0"  
-```
--
--
--
--
--
--
-定时任务每三天凌晨7点执行备份
-```bash
-0 7 */3 * * /home/beifen.sh
-```
-查看定时任务是否生效
-```bash
-crontab -e
-```
--
--
-备份vps设置定时清楚备份文件每周执行
-```bash
-(crontab -l ; echo "0 2 * * 1 /home/beifen.sh") | crontab -
-```
-查看是否添加定时任务
-```bash
-crontab -e
-```
--
--
--
--
--
--
--
--
--
-3.注意
-
-如果远端VPS重装系统了或是密码更改了。需要将之前连接的认证清除掉！
-```bash
-ssh-keygen -f "/root/.ssh/known_hosts" -R "0.0.0.0"  
-```
-0.0.0.0替换之前VPS的IP，清除认证！
--
--
--
--
--
--
--
--
--
-创建自定义备份目录修改beifen.sh文件内容
-
-将目录自定义为/home/beifen/没有就会自动创建beifen目录
--
--
-```bash
-#!/bin/bash
-
-# Create the backup directory if it doesn't exist
-mkdir -p /home/beifen/
-
-# Create a tar archive of the web directory and save it in /home/beifen/
-tar czvf /home/beifen/web_$(date +"%Y%m%d%H%M%S").tar.gz -C /home/ web
-
-# Transfer the latest tar archive to another VPS
-ls -t /home/beifen/*.tar.gz | head -1 | xargs -I {} sshpass -p 'vps密码' scp -o StrictHostKeyChecking=no -P 22 {} root@vpsip:/home/
-
-# Keep only 5 tar archives in /home/beifen/ and delete the rest
-cd /home/beifen/ && ls -t *.tar.gz | tail -n +4 | xargs -I {} rm {}
-```
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
-## 论坛备份
-```bash
-ls -t /var/discourse/shared/standalone/backups/default/*.tar.gz | head -1 | xargs -I {} sshpass -p 'vps密码' scp -o StrictHostKeyChecking=no -P 22 {} root@vpsip:/home/论坛/
+## 目录
 
 ```
+awash.sh                主入口
+cn/awash.sh             国内镜像版
+ldnmp.sh                LNMP 一键部署
+bt/                     面板相关
+docker/                 Docker 环境与常用容器
+nginx/ config/          配置模板
+Tools/
+  Linux_reinstall/      重装系统（全系发行版）
+  Force_Modified_BBR/   强制开启 BBR
+beifen.sh               备份
+quanbubeifen.sh         整站备份
+s3beifen.sh             S3 备份
+auto_cert_renewal*.sh   证书自动续期
+palworld.sh / discourse.sh / mailcaddy.sh   具体应用部署
+```
 
+## 致谢
 
+整合了多位作者的脚本，来源见仓库根目录的 [NOTICE.md](../NOTICE.md)。

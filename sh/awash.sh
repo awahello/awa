@@ -1869,7 +1869,7 @@ clear
 dd_xitong() {
 		send_stats "重装系统"
 		dd_xitong_MollyLau() {
-			wget --no-check-certificate -qO InstallNET.sh "${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/Tools/Linux_reinstall/InstallNET.sh" && chmod a+x InstallNET.sh
+			wget --no-check-certificate -qO InstallNET.sh "${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/Tools/Linux_reinstall/InstallNET.sh" && chmod a+x InstallNET.sh
 
 		}
 
@@ -13345,8 +13345,8 @@ echo ""
 echo -e "awa周边"
 echo "------------------------"
 echo -e "${gl_kjlan}B站:   ${gl_bai}https://www.akkdiy.cn/              ${gl_kjlan}导航:     ${gl_bai}https://www.akkdiy.cn/zimulu/daoh/${gl_bai}"
-echo -e "${gl_kjlan}官网:  ${gl_bai}https://www.akkdiy.cn/             
-echo -e "${gl_kjlan}博客:  ${gl_bai}https://www.akkdiy.cn/        
+echo -e "${gl_kjlan}官网:  ${gl_bai}https://www.akkdiy.cn/${gl_bai}"
+echo -e "${gl_kjlan}博客:  ${gl_bai}https://www.akkdiy.cn/${gl_bai}"
 echo "------------------------"
 echo ""
 }

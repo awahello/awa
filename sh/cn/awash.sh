@@ -18,7 +18,13 @@ country="CN"
 cn_yuan() {
 if [ "$country" = "CN" ]; then
 	zhushi=0
-	gh_proxy="https://www.akkdiy.cn/"
+	# 原来这里填的是 https://www.akkdiy.cn/ —— 那个站并不做 GitHub 反代，
+	# 拼出来的地址是 https://www.akkdiy.cn/https://raw.githubusercontent.com/...，
+	# 请求直接连不上，国内版的下载功能全都失败。
+	# 留空即走原始地址（能不能下取决于你的网络）；
+	# 要用加速，填一个「前缀 + 完整 URL」形式可用的加速地址，例如：
+	#   gh_proxy="https://ghfast.top/"
+	gh_proxy=""
 else
 	zhushi=1  # 0 表示执行，1 表示不执行
 	gh_proxy=""
@@ -353,7 +359,7 @@ install_add_docker_guanfang() {
 country=$(curl -s ipinfo.io/country)
 if [ "$country" = "CN" ]; then
 	cd ~
-	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/dockeinstall && chmod +x install
+	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/docker/install && chmod +x install
 	sh install --mirror Aliyun
 	rm -f install
 
@@ -846,8 +852,8 @@ install_ldnmp_conf() {
 
   # 创建必要的目录和文件
   cd /home && mkdir -p web/html web/mysql web/certs web/conf.d web/redis web/log/nginx && touch web/docker-compose.yml
-  wget -O /home/web/nginx.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/nginx10.conf
-  wget -O /home/web/conf.d/default.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/main/default10.conf
+  wget -O /home/web/nginx.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/nginx10.conf
+  wget -O /home/web/conf.d/default.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/main/default10.conf
 
   default_server_ssl
 
@@ -1173,7 +1179,7 @@ add_db() {
 
 reverse_proxy() {
 	  ip_address
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/reverse-proxy.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/reverse-proxy.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 	  sed -i "s/0.0.0.0/$ipv4_address/g" /home/web/conf.d/$yuming.conf
 	  sed -i "s/0000/$duankou/g" /home/web/conf.d/$yuming.conf
@@ -4123,7 +4129,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/wordpress.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/wordpress.com.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
 	  cd /home/web/html
@@ -4157,7 +4163,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/discuz.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/discuz.com.conf
 
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
@@ -4192,7 +4198,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/kdy.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/kdy.com.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
 	  cd /home/web/html
@@ -4224,7 +4230,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/maccms.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/maccms.com.conf
 
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
@@ -4265,7 +4271,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/dujiaoka.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/dujiaoka.com.conf
 
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
@@ -4311,7 +4317,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/flarum.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/flarum.com.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
 	  cd /home/web/html
@@ -4351,7 +4357,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/typecho.com.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/typecho.com.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
 	  cd /home/web/html
@@ -4384,7 +4390,7 @@ linux_ldnmp() {
 	  certs_status
 	  add_db
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/index_php.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/index_php.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
 	  cd /home/web/html
@@ -4530,7 +4536,7 @@ linux_ldnmp() {
 	  install_ssltls
 	  certs_status
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/rewrite.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/rewrite.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 	  sed -i "s/baidu.com/$reverseproxy/g" /home/web/conf.d/$yuming.conf
 
@@ -4554,7 +4560,7 @@ linux_ldnmp() {
 	  install_ssltls
 	  certs_status
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awahello/awa/blob/main/sh/nginx/reverse-proxy.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/reverse-proxy.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 	  sed -i "s/0.0.0.0/$reverseproxy/g" /home/web/conf.d/$yuming.conf
 	  sed -i "s/0000/$port/g" /home/web/conf.d/$yuming.conf
@@ -4578,7 +4584,7 @@ linux_ldnmp() {
 	  install_ssltls
 	  certs_status
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/reverse-proxy-domain.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/reverse-proxy-domain.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 	  sed -i "s|fandaicom|$fandai_yuming|g" /home/web/conf.d/$yuming.conf
 
@@ -4598,7 +4604,7 @@ linux_ldnmp() {
 	  install_ssltls
 	  certs_status
 
-	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/html.conf
+	  wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/html.conf
 	  sed -i "s/yuming.com/$yuming/g" /home/web/conf.d/$yuming.conf
 
 	  cd /home/web/html
@@ -5057,7 +5063,7 @@ linux_ldnmp() {
 					  read -e -p "输入CF的账号: " cfuser
 					  read -e -p "输入CF的Global API Key: " cftoken
 
-					  wget -O /home/web/conf.d/default.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/default11.conf
+					  wget -O /home/web/conf.d/default.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/default11.conf
 					  docker restart nginx
 
 					  cd /path/to/fail2ban/config/fail2ban/jail.d/
@@ -5137,8 +5143,8 @@ linux_ldnmp() {
 			install_docker
 
 
-			wget -O /home/web/nginx.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/nginx/nginx10.conf
-			wget -O /home/web/conf.d/default.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/blob/main/sh/default10.conf
+			wget -O /home/web/nginx.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/nginx/nginx10.conf
+			wget -O /home/web/conf.d/default.conf ${gh_proxy}https://raw.githubusercontent.com/awahello/awa/main/sh/default10.conf
 			default_server_ssl
 			nginx_upgrade
 

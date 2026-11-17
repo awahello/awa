@@ -1,3 +1,4 @@
+#!/bin/bash
 # 定义证书存储目录
 certs_directory="/etc/letsencrypt/live/"
 

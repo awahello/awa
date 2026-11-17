@@ -1,0 +1,14 @@
+# 仓库里的 shell 脚本必须是 LF。
+# 没有这一条时，在 Windows 上编辑一次再提交，整份脚本会变成 CRLF，
+# 到 Linux 上执行报：bad interpreter: /usr/bin/env bash^M —— 极难看出原因。
+*.sh    text eol=lf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.tar   binary
+*.gz    binary
+*.zip   binary
+*.7z    binary
